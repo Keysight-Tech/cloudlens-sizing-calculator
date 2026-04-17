@@ -3,24 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CloudLens sVM (VMware) Sizing Calculator — Coming Soon — Keysight</title>
+<title>CloudLens sVM (VMware) Sizing Calculator — Keysight</title>
 <style>
   :root {
     --red: #E90029; --red-dark: #B80020; --dark: #1A1A1A; --gray: #666;
-    --light-gray: #F5F5F5; --border: #E0E0E0; --gold: #D4AF37;
+    --light-gray: #F5F5F5; --border: #E0E0E0; --green: #27AE60;
+    --amber: #F39C12; --white: #FFFFFF; --gold: #D4AF37; --blue: #1E6FBA;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { font-size: 16px; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
     background: #FAFAFA; color: var(--dark); line-height: 1.6; font-size: 16px; padding: 24px;
-    min-height: 100vh;
   }
-  .container { max-width: 1000px; margin: 0 auto; }
+  .container { max-width: 1320px; margin: 0 auto; }
 
   .suite-nav {
     background: #111; color: #FFF; padding: 12px 20px; border-radius: 8px;
-    margin-bottom: 24px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
     box-shadow: 0 2px 6px rgba(0,0,0,0.08);
   }
   .suite-nav .suite-brand {
@@ -41,68 +41,203 @@
 
   header {
     background: linear-gradient(90deg, var(--red), #C00020); color: white;
-    padding: 32px 40px; border-radius: 8px; margin-bottom: 32px;
+    padding: 28px 36px; border-radius: 8px; margin-bottom: 24px;
     box-shadow: 0 6px 18px rgba(233,0,41,0.25);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
   }
-  header h1 { font-size: 28px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.3px; }
-  header .subtitle { font-size: 15px; opacity: 0.92; }
+  header .title-block h1 { font-size: 28px; font-weight: 700; margin-bottom: 5px; letter-spacing: -0.3px; }
+  header .title-block .subtitle { font-size: 15px; opacity: 0.92; }
+  header .actions { display: flex; gap: 10px; flex-wrap: wrap; }
   header .brand {
-    float: right; background: white; color: var(--red); padding: 10px 16px;
+    background: white; color: var(--red); padding: 10px 16px;
     border-radius: 6px; font-weight: 800; font-size: 16px; letter-spacing: 1px;
   }
+  header .example-btn {
+    background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.4);
+    padding: 10px 18px; border-radius: 6px; font-weight: 600; font-size: 15px;
+    cursor: pointer; transition: background 0.15s;
+  }
+  header .example-btn:hover { background: rgba(255,255,255,0.25); }
+
+  .disclaimer-banner {
+    background: #FFF8E1; border-left: 4px solid var(--gold); padding: 12px 18px;
+    border-radius: 6px; margin-bottom: 20px; font-size: 14px; color: #5D4E1F;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .disclaimer-banner strong { color: var(--dark); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  @media (max-width: 960px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
 
   .card {
-    background: white; border-radius: 8px; padding: 32px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid var(--gold);
-    margin-bottom: 20px;
+    background: white; border-radius: 8px; padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid var(--red);
   }
   .card h2 {
-    font-size: 24px; color: #8C6D1F; margin-bottom: 16px;
+    font-size: 22px; color: var(--red); margin-bottom: 18px;
+    border-bottom: 1px solid var(--border); padding-bottom: 10px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card h2 .badge {
+    background: var(--red); color: white; font-size: 12px; padding: 3px 10px;
+    border-radius: 10px; font-weight: 600; letter-spacing: 0.5px;
+  }
+  .card h3 { font-size: 16px; color: var(--dark); margin-bottom: 10px; }
+
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block; font-weight: 600; font-size: 15px; color: var(--dark); margin-bottom: 6px;
+  }
+  .field label .hint { font-weight: 400; font-size: 13px; color: var(--gray); margin-left: 6px; }
+  .field input, .field select {
+    width: 100%; padding: 11px 13px; font-size: 15px; font-family: inherit;
+    border: 1px solid var(--border); border-radius: 6px; background: white;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field input:focus, .field select:focus {
+    outline: none; border-color: var(--red); box-shadow: 0 0 0 3px rgba(233,0,41,0.12);
+  }
+  .field input.mono { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 14px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .row4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
+
+  .site-card {
+    background: white; border-radius: 8px; padding: 22px; margin-bottom: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid var(--blue);
+    position: relative;
+  }
+  .site-card h3 {
+    font-size: 18px; color: var(--blue); margin-bottom: 14px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .site-card .remove-btn {
+    background: #F5F5F5; color: var(--red); border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600;
+  }
+  .site-card .remove-btn:hover { background: #FEF0F0; }
+  .site-card .tier-tag {
+    background: var(--gold); color: #3A2E0F; font-size: 12px; padding: 3px 10px;
+    border-radius: 10px; font-weight: 600; margin-left: 10px;
+  }
+
+  .add-site-btn {
+    background: var(--green); color: white; border: none; padding: 12px 20px;
+    border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .add-site-btn:hover { background: #219653; }
+
+  .results-card {
+    background: linear-gradient(135deg, #1A1A1A, #2C3E50); color: white;
+    border-left: 4px solid var(--gold);
+  }
+  .results-card h2 { color: var(--gold); border-color: rgba(255,255,255,0.15); }
+  .metric {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .metric:last-child { border-bottom: none; }
+  .metric .label { font-size: 15px; color: rgba(255,255,255,0.85); }
+  .metric .value { font-size: 18px; font-weight: 700; color: #FFF; font-family: "SF Mono", Menlo, Consolas, monospace; }
+  .metric .value.big { font-size: 26px; color: var(--gold); }
+
+  .verdict {
+    margin-top: 16px; padding: 14px 16px; border-radius: 6px; font-size: 16px; font-weight: 500;
+  }
+  .verdict.good { background: rgba(46,204,113,0.15); border-left: 4px solid #2ECC71; color: #A9DFBF; }
+  .verdict.warn { background: rgba(243,156,18,0.15); border-left: 4px solid #F39C12; color: #F7DC6F; }
+  .verdict.bad  { background: rgba(231,76,60,0.15);  border-left: 4px solid #E74C3C; color: #F5B7B1; }
+  .verdict strong { display: block; margin-bottom: 2px; }
+
+  .full-width {
+    background: white; border-radius: 8px; padding: 24px; margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .full-width h2 {
+    color: var(--red); font-size: 22px; margin-bottom: 10px;
     display: flex; align-items: center; gap: 12px;
   }
-  .card h2 .soon-tag {
-    background: var(--gold); color: #3A2E0F; font-size: 13px;
-    padding: 4px 12px; border-radius: 10px; font-weight: 700; letter-spacing: 0.5px;
+  .full-width .desc { color: var(--gray); margin-bottom: 14px; font-size: 15px; }
+  .full-width h2 .mode-tag {
+    background: var(--dark); color: white; font-size: 12px; padding: 4px 11px;
+    border-radius: 10px; font-weight: 600; letter-spacing: 0.5px;
   }
-  .card p { font-size: 16px; color: var(--dark); margin-bottom: 14px; }
-  .card ul { margin-left: 22px; margin-bottom: 16px; }
-  .card li { font-size: 15px; color: var(--dark); margin-bottom: 8px; }
-  .card li strong { color: var(--red); }
 
-  .features {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 24px 0;
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table th {
+    background: var(--red); color: white; padding: 10px 12px; text-align: left;
+    font-weight: 600; font-size: 14px;
   }
-  @media (max-width: 700px) { .features { grid-template-columns: 1fr; } }
-  .feature {
-    padding: 16px; background: #FFFBF0; border-radius: 6px;
-    border-left: 3px solid var(--gold);
+  table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table tr:nth-child(even) { background: #FAFAFA; }
+  table tr.highlight { background: #FFF9C4 !important; font-weight: 700; }
+  table input.tier-override {
+    width: 100%; padding: 6px 8px; font-size: 13px;
+    border: 1px solid var(--border); border-radius: 4px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
   }
-  .feature h3 { font-size: 16px; color: #8C6D1F; margin-bottom: 6px; font-weight: 700; }
-  .feature p { font-size: 14px; color: var(--gray); margin: 0; }
 
-  .cta {
-    display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px;
+  .code-box {
+    background: #1A1A1A; color: #E6E6E6;
+    font-family: "SF Mono", Menlo, Consolas, "Courier New", monospace;
+    font-size: 13px; line-height: 1.6; padding: 18px; border-radius: 6px;
+    overflow-x: auto; white-space: pre; border: 1px solid #2A2A2A;
+    max-height: 500px; overflow-y: auto;
   }
+  .code-box.csv { color: #A0C8FF; }
+  .code-box.md { color: #E6E6E6; }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
   .btn {
-    background: var(--red); color: white; border: none; padding: 12px 22px;
+    background: var(--red); color: white; border: none; padding: 10px 18px;
     border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: 600;
-    text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
-    transition: background 0.15s;
+    transition: background 0.15s, transform 0.05s;
+    display: inline-flex; align-items: center; gap: 6px;
   }
   .btn:hover { background: var(--red-dark); }
+  .btn:active { transform: translateY(1px); }
   .btn.secondary { background: var(--dark); }
   .btn.secondary:hover { background: #000; }
+  .btn.success { background: var(--green); }
 
   .info-box {
-    background: #E8F4FD; border-left: 4px solid #1E6FBA;
-    padding: 16px 20px; font-size: 15px; color: #0A4A8A;
-    border-radius: 4px; margin-top: 20px; line-height: 1.6;
+    background: #E8F4FD; border-left: 4px solid var(--blue);
+    padding: 12px 16px; font-size: 14px; color: #0A4A8A;
+    border-radius: 4px; margin-top: 14px; line-height: 1.55;
   }
   .info-box strong { color: var(--dark); }
 
   footer {
     text-align: center; color: var(--gray); font-size: 13px;
-    margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border);
+    margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border);
+  }
+
+  @media print {
+    @page { size: Letter; margin: 0.5in; }
+    body { padding: 0; background: white; font-size: 11pt; line-height: 1.4; }
+    .container { max-width: 100%; }
+    .suite-nav, header .actions, .btn, .btn-row, .add-site-btn,
+    .site-card .remove-btn, #reportSection,
+    #bomSection, #csvSection { display: none !important; }
+    .disclaimer-banner { page-break-inside: avoid; }
+    .card, .full-width, .site-card {
+      box-shadow: none; border: 1px solid #DDD; page-break-inside: avoid;
+    }
+    .card h2, .full-width h2 { font-size: 14pt; }
+    .field input, .field select {
+      border: none; padding: 2px 0; background: transparent;
+      font-weight: 600; color: var(--dark); font-size: 10pt;
+    }
+    .field select { appearance: none; }
+    .metric .value.big { font-size: 14pt; }
+    .code-box {
+      font-size: 8.5pt; color: #000 !important; background: #F5F5F5 !important;
+      border: 1px solid #CCC; page-break-inside: avoid;
+    }
+    .results-card { background: #1A1A1A !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    table th { background: var(--red) !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 </style>
 </head>
@@ -118,57 +253,814 @@
   </nav>
 
   <header>
-    <div class="brand">KEYSIGHT</div>
-    <h1>CloudLens sVM Sizing Calculator</h1>
-    <div class="subtitle">VMware vSphere service VM for per-host PVLAN / port-mirror tap</div>
+    <div class="title-block">
+      <h1>CloudLens sVM (VMware) Sizing Calculator</h1>
+      <div class="subtitle">Full-stack BOM: KVO + CLM + sVM + license math &middot; multi-site &middot; v1.0</div>
+    </div>
+    <div class="actions">
+      <button class="example-btn" id="loadSbiBtn" type="button">Load SBI Example</button>
+      <button class="example-btn" id="resetBtn" type="button">Reset</button>
+      <div class="brand">KEYSIGHT</div>
+    </div>
   </header>
 
-  <div class="card">
-    <h2>Coming Soon <span class="soon-tag">IN RESEARCH</span></h2>
-    <p>The CloudLens <strong>sVM (service VM)</strong> calculator is currently being built.</p>
+  <div class="disclaimer-banner">
+    <strong>⚠ Estimated sizing.</strong>
+    &nbsp;Numbers below are derived from public Keysight documentation + real field deployments. <strong>Verify with Keysight Professional Services before committing to a customer SOW.</strong> Keysight does not publish official tiered sizing; every tier cell is editable to match PS guidance.
+  </div>
 
-    <p>sVM is a fundamentally different deployment model from the VM Sensor or K8s DaemonSet — it runs <strong>one service VM per ESXi host</strong>, taps traffic via vSphere Distributed Switch / NSX port-mirror or PVLAN, and delivers it to the CloudLens Manager. Sizing depends on:</p>
-
-    <ul>
-      <li><strong>Per-host throughput capacity</strong> — NOT per-VM, since one sVM serves all guests on an ESXi host</li>
-      <li><strong>vSphere version + topology</strong> — vSphere 7/8, standard vs distributed switch, NSX-T overlay</li>
-      <li><strong>Mirror source method</strong> — DVMirror, ERSPAN, port-mirror group, PVLAN</li>
-      <li><strong>sVM footprint budget</strong> — typically 2–8 vCPU / 4–16 GB per ESXi host</li>
-      <li><strong>Guest VM density</strong> — high-density hosts (100+ VMs) need larger sVMs</li>
-    </ul>
-
-    <div class="features">
-      <div class="feature">
-        <h3>Per-Host Sizing Tiers</h3>
-        <p>Throughput-driven tables from < 1 Gbps to 100 Gbps per host</p>
+  <div class="grid-2">
+    <div class="card">
+      <h2>Customer Context <span class="badge">GLOBAL</span></h2>
+      <div class="field">
+        <label>Customer Name <span class="hint">Appears on BOM header</span></label>
+        <input type="text" id="customerName" value="Example Customer">
       </div>
-      <div class="feature">
-        <h3>OVA / vApp Generator</h3>
-        <p>Downloadable PowerCLI scripts + OVA deployment manifests</p>
+      <div class="row2">
+        <div class="field">
+          <label>CloudLens Release</label>
+          <input type="text" id="clRelease" class="mono" value="6.14.0">
+        </div>
+        <div class="field">
+          <label>KVO Version</label>
+          <input type="text" id="kvoVersion" class="mono" value="1.12.1">
+        </div>
       </div>
-      <div class="feature">
-        <h3>NSX-T Integration</h3>
-        <p>Port-mirror session YAML for NSX Manager API</p>
-      </div>
-      <div class="feature">
-        <h3>Fleet Rollout</h3>
-        <p>PowerCLI batch deploy for all ESXi hosts in a cluster</p>
+      <div class="field">
+        <label>CLM Delivery Form</label>
+        <select id="clmForm">
+          <option value="ova" selected>vController OVA (VMware native)</option>
+          <option value="selfhost">Self-Hosted Linux installer</option>
+          <option value="saas">SaaS (Keysight-hosted)</option>
+        </select>
       </div>
     </div>
 
-    <div class="info-box">
-      <strong>Research in progress:</strong> Validating sizing data against the official Keysight CloudLens Quickstart Guide and CloudLens sVM Deployment Guide. The calculator will ship once the tiers and artifact templates match Keysight's authoritative documentation.
+    <div class="card">
+      <h2>KVO Appliance <span class="badge">CENTRAL</span></h2>
+      <div class="row2">
+        <div class="field">
+          <label>Platform</label>
+          <select id="kvoPlatform">
+            <option value="vmware" selected>VMware ESXi</option>
+            <option value="kvm">KVM</option>
+            <option value="aws">AWS</option>
+            <option value="azure">Azure</option>
+            <option value="gcp">GCP</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>HA Mode</label>
+          <select id="kvoHa">
+            <option value="single" selected>Single instance</option>
+            <option value="active-standby">Active-Standby</option>
+          </select>
+        </div>
+      </div>
+      <div class="row3">
+        <div class="field">
+          <label>vCPU</label>
+          <input type="number" id="kvoVcpu" value="8" min="4" max="64">
+        </div>
+        <div class="field">
+          <label>RAM (GB)</label>
+          <input type="number" id="kvoRam" value="16" min="8" max="256">
+        </div>
+        <div class="field">
+          <label>Disk (GB)</label>
+          <input type="number" id="kvoDisk" value="100" min="50" max="2000">
+        </div>
+      </div>
+      <div class="info-box">
+        <strong>KVO role:</strong> centralizes CLM lifecycle, visibility fabric, and sVM orchestration across all sites. One instance serves the whole customer.
+      </div>
+    </div>
+  </div>
+
+  <div class="full-width" id="sitesSection">
+    <h2>Sites <span class="mode-tag" style="background:var(--blue);">MULTI-SITE</span></h2>
+    <div class="desc">Add one card per data center / production site. Each site has its own CLM and ESXi hosts. sVMs are deployed 1-per-host.</div>
+    <div id="siteList"></div>
+    <button class="add-site-btn" id="addSiteBtn" type="button">+ Add Site</button>
+  </div>
+
+  <div class="grid-2">
+    <div class="card results-card">
+      <h2>Fleet-Wide Totals</h2>
+      <div class="metric"><span class="label">Total sVMs Deployed</span><span class="value big" id="t_svm_count">—</span></div>
+      <div class="metric"><span class="label">Total Sensor vCPU</span><span class="value" id="t_vcpu">—</span></div>
+      <div class="metric"><span class="label">Total Sensor RAM</span><span class="value" id="t_ram">—</span></div>
+      <div class="metric"><span class="label">Total Sensor Disk</span><span class="value" id="t_disk">—</span></div>
+      <div class="metric"><span class="label">Total Virtual Traffic</span><span class="value big" id="t_traffic">—</span></div>
+      <div class="metric"><span class="label">Monitored VMs</span><span class="value" id="t_vms">—</span></div>
     </div>
 
-    <div class="cta">
-      <a href="../" class="btn">Use K8s / OpenShift Calculator</a>
-      <a href="../vm/" class="btn secondary">Use VM Sensor Calculator</a>
+    <div class="card results-card">
+      <h2>License &amp; Components</h2>
+      <div class="metric"><span class="label">Throughput License (Gbps)</span><span class="value big" id="t_license">—</span></div>
+      <div class="metric"><span class="label">License Pack Option A</span><span class="value" id="t_pack_a">—</span></div>
+      <div class="metric"><span class="label">License Pack Option B</span><span class="value" id="t_pack_b">—</span></div>
+      <div class="metric"><span class="label">CLM Instances</span><span class="value" id="t_clm">—</span></div>
+      <div class="metric"><span class="label">KVO Instances</span><span class="value" id="t_kvo">1</span></div>
+      <div class="metric"><span class="label">Sites</span><span class="value" id="t_sites">—</span></div>
+      <div class="verdict" id="verdict"><strong id="verdict_title"></strong><span id="verdict_text"></span></div>
+    </div>
+  </div>
+
+  <div class="full-width">
+    <h2>Sizing Tier Reference <span class="mode-tag" style="background:var(--amber); color:var(--dark);">EDITABLE</span></h2>
+    <div class="desc">Defaults shown below. Edit any cell to override with Keysight PS guidance. Active tier per site is highlighted.</div>
+    <table id="tierTable">
+      <thead>
+        <tr>
+          <th>Per-Host Throughput</th>
+          <th>vCPU</th>
+          <th>RAM (GB)</th>
+          <th>Disk (GB)</th>
+          <th>NICs</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody id="tierTbody"><!-- Populated by JS --></tbody>
+    </table>
+    <div class="info-box" style="background:#FFF8E1; border-left-color:var(--gold); color:#5D4E1F;">
+      <strong>⚠ Estimated — verify with Keysight PS.</strong>
+      Anchor point: SBI production deployment (Sept 2025) — 35 sVMs for 100 Gbps aggregate = ~3 Gbps/host = tier 2 (4 vCPU / 8 GB / 40 GB / 3 NICs). Other tiers are inferred.
+    </div>
+  </div>
+
+  <div class="full-width" id="bomSection">
+    <h2>Markdown BOM <span class="mode-tag">DELIVERABLE</span></h2>
+    <div class="desc">Complete Bill of Materials with executive summary, sizing decision, license requirements, network prerequisites, and deployment checklist. Drops into email, Confluence, Jira, or SOW.</div>
+    <div class="code-box md" id="bomOutput">Loading...</div>
+    <div class="btn-row">
+      <button class="btn" id="copyBom" type="button">Copy BOM</button>
+      <button class="btn secondary" id="downloadBom" type="button">Download .md</button>
+      <button class="btn secondary" id="printReport" type="button">Print / Save as PDF</button>
+    </div>
+  </div>
+
+  <div class="full-width" id="csvSection">
+    <h2>CSV for SOW <span class="mode-tag" style="background:var(--green);">SOW</span></h2>
+    <div class="desc">One row per component per site. Drop into Keysight SOW templates or any spreadsheet. Opens cleanly in Excel, Numbers, Google Sheets.</div>
+    <div class="code-box csv" id="csvOutput" style="max-height: 300px;">Loading...</div>
+    <div class="btn-row">
+      <button class="btn" id="copyCsv" type="button">Copy CSV</button>
+      <button class="btn secondary" id="downloadCsv" type="button">Download .csv</button>
     </div>
   </div>
 
   <footer>
-    &copy; Keysight Technologies &nbsp;|&nbsp; CloudLens Sizing Suite &nbsp;|&nbsp; Prepared by Brine Ketum, Solutions Engineer &nbsp;|&nbsp; Confidential
+    &copy; Keysight Technologies &nbsp;|&nbsp; CloudLens sVM (VMware) Sizing Calculator v1.0 &nbsp;|&nbsp; Prepared by Brine Ketum, Solutions Engineer &nbsp;|&nbsp; Confidential &nbsp;|&nbsp; ⚠ Estimated sizing, verify with Keysight PS
   </footer>
 </div>
+
+<script>
+/* ========== TIER TABLE (editable) ========== */
+let TIERS = [
+  { gbps: 1,   vcpu: 2,  ram: 4,  disk: 30,  nics: 3,  notes: "Dev/test",                    label: "< 1 Gbps" },
+  { gbps: 5,   vcpu: 4,  ram: 8,  disk: 40,  nics: 3,  notes: "SBI anchor (~3 Gbps/host)",   label: "1–5 Gbps" },
+  { gbps: 10,  vcpu: 6,  ram: 8,  disk: 40,  nics: 3,  notes: "High-density",                label: "5–10 Gbps" },
+  { gbps: 25,  vcpu: 8,  ram: 16, disk: 60,  nics: 4,  notes: "Telco edge",                  label: "10–25 Gbps" },
+  { gbps: 40,  vcpu: 12, ram: 24, disk: 80,  nics: 4,  notes: "SR-IOV recommended",          label: "25–40 Gbps" },
+  { gbps: 100, vcpu: 16, ram: 32, disk: 100, nics: 4,  notes: "DPDK required",               label: "40–100 Gbps" },
+  { gbps: 9999,vcpu: 16, ram: 32, disk: 100, nics: 4,  notes: "2× sVM/host or HW TAP",       label: "> 100 Gbps" }
+];
+
+const DEFAULT_CLM = { vcpu: 6, ram: 16, disk: 200 };
+const DEFAULT_SITE = {
+  name: "Site 1",
+  esxiHosts: 10,
+  throughput: 30,
+  monitoredVms: 400,
+  vsphereVersion: "8.0",
+  tapMethod: "vds-vspan",
+  egressProtocol: "gre",
+  clmPlacement: "per-site",
+  clmVcpu: 6,
+  clmRam: 16,
+  clmDisk: 200,
+  toolDestination: "Physical Packet Broker"
+};
+
+const SBI_PRESET = {
+  customerName: "State Bank of India (SBI)",
+  clRelease: "6.14.0",
+  kvoVersion: "1.12.1",
+  clmForm: "ova",
+  kvoPlatform: "vmware",
+  kvoHa: "single",
+  kvoVcpu: 8, kvoRam: 16, kvoDisk: 100,
+  sites: [
+    {
+      name: "Mumbai DC", esxiHosts: 17, throughput: 50, monitoredVms: 750,
+      vsphereVersion: "7.0", tapMethod: "vds-vspan", egressProtocol: "gre",
+      clmPlacement: "per-site", clmVcpu: 6, clmRam: 16, clmDisk: 200,
+      toolDestination: "Physical Packet Broker + Riverbed NPM"
+    },
+    {
+      name: "Bangalore DC", esxiHosts: 18, throughput: 50, monitoredVms: 750,
+      vsphereVersion: "7.0", tapMethod: "vds-vspan", egressProtocol: "gre",
+      clmPlacement: "per-site", clmVcpu: 6, clmRam: 16, clmDisk: 200,
+      toolDestination: "Physical Packet Broker + Riverbed NPM"
+    }
+  ]
+};
+
+const DEFAULTS_PRESET = {
+  customerName: "Example Customer",
+  clRelease: "6.14.0",
+  kvoVersion: "1.12.1",
+  clmForm: "ova",
+  kvoPlatform: "vmware",
+  kvoHa: "single",
+  kvoVcpu: 8, kvoRam: 16, kvoDisk: 100,
+  sites: [ Object.assign({}, DEFAULT_SITE) ]
+};
+
+/* ========== STATE ========== */
+let sites = [ Object.assign({}, DEFAULT_SITE) ];
+
+/* ========== HELPERS ========== */
+function $(id) { return document.getElementById(id); }
+function setText(id, text) { $(id).textContent = text; }
+
+function findTier(gbps) {
+  for (let i = 0; i < TIERS.length; i++) {
+    if (gbps <= TIERS[i].gbps) return { tier: TIERS[i], index: i };
+  }
+  return { tier: TIERS[TIERS.length - 1], index: TIERS.length - 1 };
+}
+
+function download(filename, content, mime) {
+  const blob = new Blob([content], { type: mime || "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function wireCopy(btnId, srcId) {
+  $(btnId).addEventListener("click", function () {
+    navigator.clipboard.writeText($(srcId).textContent).then(() => {
+      const btn = $(btnId); const orig = btn.textContent;
+      btn.textContent = "✓ Copied!"; btn.classList.add("success");
+      setTimeout(() => { btn.textContent = orig; btn.classList.remove("success"); }, 1800);
+    });
+  });
+}
+
+/* ========== TIER TABLE RENDERING ========== */
+function renderTierTable() {
+  const tbody = $("tierTbody");
+  while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+  TIERS.forEach((tier, i) => {
+    const tr = document.createElement("tr");
+    tr.dataset.tierIdx = i;
+    const addCell = (content) => {
+      const td = document.createElement("td");
+      if (typeof content === "string") td.textContent = content;
+      else td.appendChild(content);
+      tr.appendChild(td);
+    };
+    const mkInput = (val, key) => {
+      const inp = document.createElement("input");
+      inp.type = "number"; inp.value = val; inp.className = "tier-override"; inp.min = 0;
+      inp.addEventListener("input", function () {
+        TIERS[i][key] = parseFloat(inp.value) || 0;
+        calculate();
+      });
+      return inp;
+    };
+    addCell(tier.label);
+    addCell(mkInput(tier.vcpu, "vcpu"));
+    addCell(mkInput(tier.ram, "ram"));
+    addCell(mkInput(tier.disk, "disk"));
+    addCell(mkInput(tier.nics, "nics"));
+    addCell(tier.notes);
+    tbody.appendChild(tr);
+  });
+}
+
+function highlightActiveTiers() {
+  document.querySelectorAll("#tierTbody tr").forEach(r => r.classList.remove("highlight"));
+  const active = new Set();
+  sites.forEach(s => {
+    const perHost = s.esxiHosts > 0 ? s.throughput / s.esxiHosts : 0;
+    active.add(findTier(perHost).index);
+  });
+  active.forEach(i => {
+    const tr = document.querySelector(`#tierTbody tr[data-tier-idx="${i}"]`);
+    if (tr) tr.classList.add("highlight");
+  });
+}
+
+/* ========== SITE RENDERING ========== */
+function renderSites() {
+  const list = $("siteList");
+  while (list.firstChild) list.removeChild(list.firstChild);
+  sites.forEach((site, idx) => {
+    const card = document.createElement("div");
+    card.className = "site-card";
+    card.dataset.idx = idx;
+
+    const perHost = site.esxiHosts > 0 ? site.throughput / site.esxiHosts : 0;
+    const { tier } = findTier(perHost);
+
+    const h3 = document.createElement("h3");
+    const titleSpan = document.createElement("span");
+    titleSpan.textContent = "📍 " + site.name;
+    const tierTag = document.createElement("span");
+    tierTag.className = "tier-tag";
+    tierTag.textContent = tier.label + " tier (" + perHost.toFixed(1) + " Gbps/host)";
+    titleSpan.appendChild(tierTag);
+    h3.appendChild(titleSpan);
+
+    if (sites.length > 1) {
+      const rm = document.createElement("button");
+      rm.className = "remove-btn"; rm.type = "button";
+      rm.textContent = "× Remove";
+      rm.addEventListener("click", () => { sites.splice(idx, 1); renderSites(); calculate(); });
+      h3.appendChild(rm);
+    }
+    card.appendChild(h3);
+
+    const makeField = (label, hint, inputHtml) => {
+      const wrap = document.createElement("div");
+      wrap.className = "field";
+      const lbl = document.createElement("label");
+      lbl.textContent = label;
+      if (hint) {
+        const h = document.createElement("span");
+        h.className = "hint"; h.textContent = hint;
+        lbl.appendChild(h);
+      }
+      wrap.appendChild(lbl);
+      wrap.appendChild(inputHtml);
+      return wrap;
+    };
+
+    const mkInput = (type, value, min, max, onChange) => {
+      const i = document.createElement("input");
+      i.type = type; i.value = value;
+      if (min !== undefined) i.min = min;
+      if (max !== undefined) i.max = max;
+      i.addEventListener("input", onChange);
+      return i;
+    };
+
+    const mkSelect = (options, value, onChange) => {
+      const s = document.createElement("select");
+      options.forEach(o => {
+        const opt = document.createElement("option");
+        opt.value = o.v; opt.textContent = o.l;
+        if (o.v === value) opt.selected = true;
+        s.appendChild(opt);
+      });
+      s.addEventListener("change", onChange);
+      return s;
+    };
+
+    /* Row 1: name, hosts, throughput */
+    const row1 = document.createElement("div"); row1.className = "row3";
+    row1.appendChild(makeField("Site Name", null,
+      mkInput("text", site.name, undefined, undefined, e => { sites[idx].name = e.target.value; renderSites(); calculate(); })));
+    row1.appendChild(makeField("ESXi Hosts", "1 sVM per host",
+      mkInput("number", site.esxiHosts, 1, 1000, e => { sites[idx].esxiHosts = parseInt(e.target.value)||1; renderSites(); calculate(); })));
+    row1.appendChild(makeField("Throughput (Gbps)", "Aggregate site traffic",
+      mkInput("number", site.throughput, 0, 10000, e => { sites[idx].throughput = parseFloat(e.target.value)||0; renderSites(); calculate(); })));
+    card.appendChild(row1);
+
+    /* Row 2: monitored VMs, vSphere, tap, egress */
+    const row2 = document.createElement("div"); row2.className = "row4";
+    row2.appendChild(makeField("Monitored VMs", null,
+      mkInput("number", site.monitoredVms, 0, 100000, e => { sites[idx].monitoredVms = parseInt(e.target.value)||0; calculate(); })));
+    row2.appendChild(makeField("vSphere", null,
+      mkSelect([{v:"6.7",l:"6.7"},{v:"7.0",l:"7.0"},{v:"8.0",l:"8.0"}], site.vsphereVersion, e => { sites[idx].vsphereVersion = e.target.value; calculate(); })));
+    row2.appendChild(makeField("Tap Method", null,
+      mkSelect([
+        {v:"vds-vspan", l:"vDS VSPAN (SBI default)"},
+        {v:"nsxt-pms",  l:"NSX-T Port-Mirror-Session"},
+        {v:"nsxt-netx", l:"NSX-T NetX Copy Packet"}
+      ], site.tapMethod, e => { sites[idx].tapMethod = e.target.value; calculate(); })));
+    row2.appendChild(makeField("Egress", null,
+      mkSelect([
+        {v:"gre", l:"GRE"},
+        {v:"vxlan", l:"VXLAN"},
+        {v:"erspan", l:"ERSPAN"}
+      ], site.egressProtocol, e => { sites[idx].egressProtocol = e.target.value; calculate(); })));
+    card.appendChild(row2);
+
+    /* Row 3: CLM placement + sizing + tool destination */
+    const row3 = document.createElement("div"); row3.className = "row4";
+    row3.appendChild(makeField("CLM Placement", null,
+      mkSelect([
+        {v:"per-site", l:"Per-Site CLM"},
+        {v:"shared",   l:"Shared CLM (multi-site)"},
+        {v:"external", l:"External / SaaS"}
+      ], site.clmPlacement, e => { sites[idx].clmPlacement = e.target.value; calculate(); })));
+    row3.appendChild(makeField("CLM vCPU", null,
+      mkInput("number", site.clmVcpu, 2, 64, e => { sites[idx].clmVcpu = parseInt(e.target.value)||6; calculate(); })));
+    row3.appendChild(makeField("CLM RAM (GB)", null,
+      mkInput("number", site.clmRam, 4, 512, e => { sites[idx].clmRam = parseInt(e.target.value)||16; calculate(); })));
+    row3.appendChild(makeField("CLM Disk (GB)", null,
+      mkInput("number", site.clmDisk, 50, 5000, e => { sites[idx].clmDisk = parseInt(e.target.value)||200; calculate(); })));
+    card.appendChild(row3);
+
+    /* Row 4: tool destination */
+    card.appendChild(makeField("Tool Destination", "Where tapped traffic forwards to (packet broker, NPM, analyzer)",
+      mkInput("text", site.toolDestination, undefined, undefined, e => { sites[idx].toolDestination = e.target.value; calculate(); })));
+
+    list.appendChild(card);
+  });
+}
+
+/* ========== CALCULATION ========== */
+function calculate() {
+  let totalSvms = 0, totalVcpu = 0, totalRam = 0, totalDisk = 0;
+  let totalTraffic = 0, totalVms = 0, totalClm = 0;
+
+  sites.forEach(s => {
+    const perHost = s.esxiHosts > 0 ? s.throughput / s.esxiHosts : 0;
+    const { tier } = findTier(perHost);
+    /* sVM count = 1 per host; tier > 100 Gbps means 2x per host */
+    const perHostFactor = (tier.label === "> 100 Gbps") ? 2 : 1;
+    const siteSvms = s.esxiHosts * perHostFactor;
+    totalSvms += siteSvms;
+    totalVcpu += siteSvms * tier.vcpu;
+    totalRam += siteSvms * tier.ram;
+    totalDisk += siteSvms * tier.disk;
+    totalTraffic += s.throughput;
+    totalVms += s.monitoredVms;
+    if (s.clmPlacement === "per-site") {
+      totalClm += 1;
+      totalVcpu += s.clmVcpu;
+      totalRam += s.clmRam;
+      totalDisk += s.clmDisk;
+    }
+  });
+
+  /* Shared CLMs: count unique shared entries as 1 */
+  const hasShared = sites.some(s => s.clmPlacement === "shared");
+  if (hasShared) {
+    const sharedSite = sites.find(s => s.clmPlacement === "shared");
+    totalClm += 1;
+    totalVcpu += sharedSite.clmVcpu;
+    totalRam += sharedSite.clmRam;
+    totalDisk += sharedSite.clmDisk;
+  }
+
+  /* Add KVO */
+  const kvoVcpu = parseInt($("kvoVcpu").value) || 8;
+  const kvoRam = parseInt($("kvoRam").value) || 16;
+  const kvoDisk = parseInt($("kvoDisk").value) || 100;
+  totalVcpu += kvoVcpu;
+  totalRam += kvoRam;
+  totalDisk += kvoDisk;
+
+  setText("t_svm_count", totalSvms);
+  setText("t_vcpu", totalVcpu + " vCPU");
+  setText("t_ram", totalRam + " GB");
+  setText("t_disk", totalDisk + " GB");
+  setText("t_traffic", totalTraffic.toFixed(1) + " Gbps");
+  setText("t_vms", totalVms.toLocaleString());
+  setText("t_license", Math.ceil(totalTraffic) + " Gbps");
+
+  /* License packs */
+  const packs100 = Math.ceil(totalTraffic / 100);
+  const packs10 = Math.ceil(totalTraffic / 10);
+  setText("t_pack_a", packs100 + "× LIC-CL-VTAP-100");
+  setText("t_pack_b", packs10 + "× LIC-CL-VTAP-10");
+
+  setText("t_clm", totalClm);
+  setText("t_sites", sites.length);
+
+  /* Verdict */
+  const v = $("verdict"), vt = $("verdict_title"), vx = $("verdict_text");
+  if (totalTraffic <= 25) {
+    v.className = "verdict good";
+    vt.textContent = "✓ Standard deployment";
+    vx.textContent = "Single-site or small multi-site. Standard sizing applies.";
+  } else if (totalTraffic <= 100) {
+    v.className = "verdict good";
+    vt.textContent = "✓ Large production deployment";
+    vx.textContent = "Multi-site enterprise. 100 Gbps license pack fits. Review NSX licensing requirements.";
+  } else if (totalTraffic <= 400) {
+    v.className = "verdict warn";
+    vt.textContent = "⚠ Hyperscale deployment";
+    vx.textContent = "Multiple 100G license packs needed. SR-IOV and DPDK strongly recommended on sVMs. Engage Keysight PS early.";
+  } else {
+    v.className = "verdict bad";
+    vt.textContent = "✗ Extreme scale — architecture review required";
+    vx.textContent = "Beyond 400 Gbps aggregate. Likely requires hardware TAP supplementation or distributed sVM architecture.";
+  }
+
+  highlightActiveTiers();
+  generateBom();
+  generateCsv();
+}
+
+/* ========== ARTIFACT GENERATION ========== */
+function gbom() {
+  const customerName = $("customerName").value || "Customer";
+  const now = new Date();
+  const ts = now.toISOString().replace("T", " ").slice(0, 16) + " UTC";
+  const clRelease = $("clRelease").value;
+  const kvoVersion = $("kvoVersion").value;
+  const kvoVcpu = $("kvoVcpu").value, kvoRam = $("kvoRam").value, kvoDisk = $("kvoDisk").value;
+  const totalTraffic = sites.reduce((a,s) => a + s.throughput, 0);
+  const totalVms = sites.reduce((a,s) => a + s.monitoredVms, 0);
+
+  let totalSvms = 0;
+  sites.forEach(s => {
+    const perHost = s.esxiHosts > 0 ? s.throughput / s.esxiHosts : 0;
+    const { tier } = findTier(perHost);
+    const factor = (tier.label === "> 100 Gbps") ? 2 : 1;
+    totalSvms += s.esxiHosts * factor;
+  });
+
+  const packs100 = Math.ceil(totalTraffic / 100);
+  const packs10 = Math.ceil(totalTraffic / 10);
+
+  const L = [];
+  L.push("# CloudLens sVM Sizing BOM — " + customerName);
+  L.push("");
+  L.push("> **⚠ ESTIMATED SIZING.** Verify with Keysight Professional Services before customer commit. Keysight does not publish official tiered sizing guidance; numbers below are inferred from public documentation and real field deployments (SBI, Sept 2025).");
+  L.push("");
+  L.push("> Generated by **CloudLens sVM Sizing Calculator v1.0** on " + ts);
+  L.push("> Prepared by Brine Ketum, Solutions Engineer — Keysight Technologies");
+  L.push("> Version stamp: CloudLens " + clRelease + " / KVO " + kvoVersion);
+  L.push("");
+  L.push("---");
+  L.push("");
+  L.push("## 1. Executive Summary");
+  L.push("");
+  L.push("| Metric | Value |");
+  L.push("|---|---|");
+  L.push("| Customer | " + customerName + " |");
+  L.push("| Sites | " + sites.length + " |");
+  L.push("| Total ESXi Hosts | " + sites.reduce((a,s) => a + s.esxiHosts, 0) + " |");
+  L.push("| Total sVMs | **" + totalSvms + "** |");
+  L.push("| Total Virtual Traffic | **" + totalTraffic.toFixed(1) + " Gbps** |");
+  L.push("| Monitored VMs | " + totalVms.toLocaleString() + " |");
+  L.push("| Throughput License | **" + Math.ceil(totalTraffic) + " Gbps** |");
+  L.push("| CloudLens Release | " + clRelease + " |");
+  L.push("| KVO Version | " + kvoVersion + " |");
+  L.push("");
+  L.push("## 2. Sizing Decision — Per Site");
+  L.push("");
+  L.push("| Site | ESXi Hosts | Throughput | Per-Host | Tier | sVMs | vCPU/sVM | RAM/sVM | Monitored VMs |");
+  L.push("|---|---|---|---|---|---|---|---|---|");
+  sites.forEach(s => {
+    const perHost = s.esxiHosts > 0 ? s.throughput / s.esxiHosts : 0;
+    const { tier } = findTier(perHost);
+    const factor = (tier.label === "> 100 Gbps") ? 2 : 1;
+    L.push("| " + s.name +
+           " | " + s.esxiHosts +
+           " | " + s.throughput.toFixed(1) + " Gbps" +
+           " | " + perHost.toFixed(1) + " Gbps" +
+           " | " + tier.label +
+           " | " + (s.esxiHosts * factor) +
+           " | " + tier.vcpu +
+           " | " + tier.ram + " GB" +
+           " | " + s.monitoredVms.toLocaleString() + " |");
+  });
+  L.push("");
+  L.push("## 3. Component BOM");
+  L.push("");
+  L.push("| Component | Site/Scope | Model | Count | vCPU each | RAM each | Disk each |");
+  L.push("|---|---|---|---|---|---|---|");
+  L.push("| KVO | Centralized | Keysight Vision Orchestrator | 1 | " + kvoVcpu + " | " + kvoRam + " GB | " + kvoDisk + " GB |");
+  sites.forEach(s => {
+    if (s.clmPlacement === "per-site") {
+      L.push("| CLM | " + s.name + " | vController OVA | 1 | " + s.clmVcpu + " | " + s.clmRam + " GB | " + s.clmDisk + " GB |");
+    }
+  });
+  if (sites.some(s => s.clmPlacement === "shared")) {
+    const sh = sites.find(s => s.clmPlacement === "shared");
+    L.push("| CLM | Shared (multi-site) | vController OVA | 1 | " + sh.clmVcpu + " | " + sh.clmRam + " GB | " + sh.clmDisk + " GB |");
+  }
+  sites.forEach(s => {
+    const perHost = s.esxiHosts > 0 ? s.throughput / s.esxiHosts : 0;
+    const { tier } = findTier(perHost);
+    const factor = (tier.label === "> 100 Gbps") ? 2 : 1;
+    L.push("| sVM | " + s.name + " | " + tier.label + " tier | " + (s.esxiHosts * factor) + " | " + tier.vcpu + " | " + tier.ram + " GB | " + tier.disk + " GB |");
+  });
+  L.push("");
+  L.push("## 4. License Requirements");
+  L.push("");
+  L.push("- **Total throughput:** " + totalTraffic.toFixed(1) + " Gbps");
+  L.push("- **Pack option A (100G packs):** " + packs100 + " × `LIC-CL-VTAP-100` (covers " + (packs100*100) + " Gbps)");
+  L.push("- **Pack option B (10G packs):** " + packs10 + " × `LIC-CL-VTAP-10` (covers " + (packs10*10) + " Gbps)");
+  L.push("");
+  L.push("> **Note:** Final pack mix depends on Keysight pricing quote. Option A is simpler; option B offers more granularity for phased rollouts.");
+  L.push("");
+  L.push("## 5. Network Requirements — Per Site");
+  L.push("");
+  sites.forEach(s => {
+    L.push("### " + s.name);
+    L.push("- **vSphere version:** " + s.vsphereVersion);
+    L.push("- **Tap method:** " + s.tapMethod + (s.tapMethod === "vds-vspan" ? " (requires VDS Enterprise Plus licensing)" : ""));
+    L.push("- **Egress tunnel:** " + s.egressProtocol.toUpperCase());
+    L.push("- **Tool destination:** " + s.toolDestination);
+    L.push("- **Required vDS privileges:** Create/Delete/Modify dvPortGroups, VSPAN operations, Network assignment");
+    L.push("- **Port groups needed:** Separate Management PG + Egress PG (never share — congestion risk)");
+    L.push("- **Firewall:** L3 HTTPS from sVMs to CLM (" + s.clmPlacement + "), " + s.egressProtocol.toUpperCase() + " tunnels to tool destination");
+    L.push("");
+  });
+  L.push("## 6. Deployment Checklist");
+  L.push("");
+  L.push("### Prerequisites (all sites)");
+  L.push("- [ ] vCenter admin access with vDS VSPAN privileges");
+  L.push("- [ ] Enterprise Plus vSphere license (required for VDS port-mirror)");
+  L.push("- [ ] Network design: Management PG and Egress PG defined per host");
+  L.push("- [ ] GRE/VXLAN origination IP pool allocated");
+  L.push("- [ ] Firewall path: sVMs → CLM (HTTPS/443), sVMs → tool destination (tunnel)");
+  L.push("- [ ] Keysight Support account with download access for CLM + sVM OVA files");
+  L.push("- [ ] License key: " + Math.ceil(totalTraffic) + " Gbps CloudLens Throughput");
+  L.push("");
+  L.push("### Deployment Sequence (from KVO Quickstart v" + kvoVersion + ")");
+  L.push("- [ ] Deploy KVO appliance (centralized, " + kvoVcpu + " vCPU / " + kvoRam + " GB / " + kvoDisk + " GB)");
+  sites.forEach(s => {
+    if (s.clmPlacement === "per-site") {
+      L.push("- [ ] Deploy CLM at " + s.name + " (" + s.clmVcpu + " vCPU / " + s.clmRam + " GB / " + s.clmDisk + " GB), configure static IP/DNS/gateway");
+    }
+  });
+  L.push("- [ ] Create KVO user on each CLM; register CLMs in KVO");
+  L.push("- [ ] Upload SVM OVA into KVO (approx 15 min extraction)");
+  L.push("- [ ] Add each vCenter into KVO Cloud Configs (root-level user)");
+  L.push("- [ ] Define remote tool endpoints (packet broker) with GRE/VXLAN config");
+  L.push("- [ ] Commit all config changes");
+  L.push("- [ ] Deploy sVMs via KVO visibility fabric (1 per ESXi host)");
+  L.push("- [ ] Assign Management PG + Egress PG + IPs per sVM");
+  L.push("- [ ] Configure GRE origination IP pool");
+  L.push("- [ ] Create Cloud Collections (regex on ESXi host IPs to auto-assign)");
+  L.push("- [ ] Drag-drop connection in Fabric Diagram to activate traffic flow");
+  L.push("");
+  L.push("### Post-Deployment Validation (per SVM)");
+  L.push("- [ ] Console login: admin / ixia (change default password immediately)");
+  L.push("- [ ] `show interface-status` — verify Network Adapter 1 (Mgmt) + Adapter 2 (Egress)");
+  L.push("- [ ] `show running-config` — verify CLM registration + mirror config");
+  L.push("- [ ] `show interface-pkt-counters` — confirm traffic flowing");
+  L.push("- [ ] `ping <CLM>` and `traceroute <tool-destination>` — confirm L3 paths");
+  L.push("- [ ] Validate traffic arrives at packet broker / NPM tool");
+  L.push("");
+  L.push("### Anti-vMotion Pinning (CRITICAL)");
+  L.push("- [ ] Create DRS anti-affinity rule: each sVM pinned to its ESXi host");
+  L.push("- [ ] Exclude sVMs from vMotion (moves break port-mirror session)");
+  L.push("- [ ] Exclude sVMs from cluster DRS balancing");
+  L.push("");
+  L.push("## 7. Risks &amp; Dependencies");
+  L.push("");
+  L.push("| Risk | Mitigation |");
+  L.push("|---|---|");
+  L.push("| Sizing numbers are ESTIMATED, not Keysight-published | **Verify every tier with Keysight Professional Services before customer commit.** |");
+  L.push("| vMotion breaks port-mirror sessions | Pin sVMs per host via DRS anti-affinity; exclude from vMotion |");
+  L.push("| MTU mismatch causes silent packet drops | Set VDS + tap + tool path to 9000 (jumbo) end-to-end |");
+  L.push("| VDS port-mirror requires Enterprise Plus license | Confirm vSphere licensing tier with customer before quoting |");
+  L.push("| VDS limit: 16 active port-mirror sessions per switch | Plan tenant-per-session allocation; split across multiple VDS if needed |");
+  L.push("| VSS has no port-mirror API | Customer must migrate to VDS before sVM deployment |");
+  L.push("| sVM per-host footprint may exceed host capacity | Size based on ACTUAL host vCPU/RAM; leave 20% headroom for guest VMs |");
+  L.push("");
+  L.push("## 8. Rollback");
+  L.push("");
+  L.push("```bash");
+  L.push("# Per-sVM: remove mirror session, power off, delete VM");
+  L.push("# via KVO: Fabric Diagram → disconnect → delete sVM");
+  L.push("# via PowerCLI (bulk):");
+  L.push("Get-VM -Name 'cloudlens-svm-*' | Stop-VM -Confirm:$false");
+  L.push("Get-VM -Name 'cloudlens-svm-*' | Remove-VM -DeletePermanently -Confirm:$false");
+  L.push("");
+  L.push("# Remove VDS port-mirror sessions");
+  L.push("Get-VDSwitch -Name '<your-vds>' | Get-VDPortMirrorSession | Remove-VDPortMirrorSession");
+  L.push("");
+  L.push("# Remove CLM + KVO VMs (only after all sVMs removed)");
+  L.push("Get-VM -Name 'cloudlens-clm-*','kvo-*' | Remove-VM -DeletePermanently -Confirm:$false");
+  L.push("```");
+  L.push("");
+  L.push("---");
+  L.push("");
+  L.push("## References");
+  L.push("- CloudLens vController User Guide v" + clRelease);
+  L.push("- KVO-CloudLens Integration Quickstart Guide v" + kvoVersion);
+  L.push("- Keysight CloudLens for VMware NSX Solution Brief (public)");
+  L.push("- Real deployment reference: State Bank of India (SBI), Sept 2025 (internal)");
+  L.push("");
+  L.push("*Questions? Contact Keysight Solutions Engineering.*");
+  L.push("");
+  L.push("⚠ **All sizing numbers on this page are estimates. Verify with Keysight Professional Services before customer commit.**");
+  L.push("");
+  return L.join("\n");
+}
+
+function generateBom() {
+  $("bomOutput").textContent = gbom();
+}
+
+function generateCsv() {
+  const customerName = $("customerName").value || "Customer";
+  const kvoVcpu = $("kvoVcpu").value, kvoRam = $("kvoRam").value, kvoDisk = $("kvoDisk").value;
+
+  const rows = [];
+  rows.push(["site","component","model","vcpu","ram_gb","disk_gb","count","throughput_gbps","license_pack","notes"]);
+  rows.push(["(global)","KVO","Keysight Vision Orchestrator",kvoVcpu,kvoRam,kvoDisk,"1","-","-","Centralized"]);
+  sites.forEach(s => {
+    if (s.clmPlacement === "per-site") {
+      rows.push([s.name,"CLM","vController OVA",s.clmVcpu,s.clmRam,s.clmDisk,"1","-","-","Per-site CLM, vSphere " + s.vsphereVersion]);
+    }
+  });
+  if (sites.some(s => s.clmPlacement === "shared")) {
+    const sh = sites.find(s => s.clmPlacement === "shared");
+    rows.push(["(shared)","CLM","vController OVA",sh.clmVcpu,sh.clmRam,sh.clmDisk,"1","-","-","Shared multi-site"]);
+  }
+  let totalTraffic = 0, totalSvms = 0, totalVcpu = parseInt(kvoVcpu), totalRam = parseInt(kvoRam), totalDisk = parseInt(kvoDisk);
+  sites.forEach(s => {
+    const perHost = s.esxiHosts > 0 ? s.throughput / s.esxiHosts : 0;
+    const { tier } = findTier(perHost);
+    const factor = (tier.label === "> 100 Gbps") ? 2 : 1;
+    const count = s.esxiHosts * factor;
+    rows.push([s.name,"sVM",tier.label + " tier",tier.vcpu,tier.ram,tier.disk,count,s.throughput.toFixed(1),"-","1 per host " + (factor === 2 ? "(×2 for hyperscale)" : "") + ", " + s.tapMethod + ", egress " + s.egressProtocol]);
+    totalTraffic += s.throughput;
+    totalSvms += count;
+    totalVcpu += count * tier.vcpu;
+    totalRam += count * tier.ram;
+    totalDisk += count * tier.disk;
+    if (s.clmPlacement === "per-site") {
+      totalVcpu += parseInt(s.clmVcpu); totalRam += parseInt(s.clmRam); totalDisk += parseInt(s.clmDisk);
+    }
+  });
+  rows.push(["(license)","License","Throughput pack","-","-","-","-",totalTraffic.toFixed(1),Math.ceil(totalTraffic/100) + "x LIC-CL-VTAP-100 OR " + Math.ceil(totalTraffic/10) + "x LIC-CL-VTAP-10","Customer: " + customerName]);
+  rows.push(["(TOTAL)","Fleet","All components",totalVcpu,totalRam,totalDisk,totalSvms + " sVMs",totalTraffic.toFixed(1),"-","Estimated — verify with Keysight PS"]);
+
+  const csv = rows.map(r => r.map(c => {
+    const s = String(c);
+    if (s.includes(",") || s.includes("\"") || s.includes("\n")) {
+      return "\"" + s.replace(/"/g, "\"\"") + "\"";
+    }
+    return s;
+  }).join(",")).join("\n");
+
+  $("csvOutput").textContent = csv;
+}
+
+function getBomFilename() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  const stamp = now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + "-" + pad(now.getHours()) + pad(now.getMinutes());
+  const name = ($("customerName").value || "customer").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return "cloudlens-svm-bom-" + name + "-" + stamp;
+}
+
+/* ========== PRESET APPLICATION ========== */
+function applyPreset(p) {
+  $("customerName").value = p.customerName;
+  $("clRelease").value = p.clRelease;
+  $("kvoVersion").value = p.kvoVersion;
+  $("clmForm").value = p.clmForm;
+  $("kvoPlatform").value = p.kvoPlatform;
+  $("kvoHa").value = p.kvoHa;
+  $("kvoVcpu").value = p.kvoVcpu;
+  $("kvoRam").value = p.kvoRam;
+  $("kvoDisk").value = p.kvoDisk;
+  sites = p.sites.map(s => Object.assign({}, s));
+  renderSites();
+  calculate();
+}
+
+/* ========== WIRING ========== */
+$("addSiteBtn").addEventListener("click", function () {
+  const n = sites.length + 1;
+  sites.push(Object.assign({}, DEFAULT_SITE, { name: "Site " + n }));
+  renderSites();
+  calculate();
+});
+
+$("loadSbiBtn").addEventListener("click", function () { applyPreset(SBI_PRESET); });
+$("resetBtn").addEventListener("click", function () { applyPreset(DEFAULTS_PRESET); });
+
+wireCopy("copyBom", "bomOutput");
+wireCopy("copyCsv", "csvOutput");
+
+$("downloadBom").addEventListener("click", function () {
+  download(getBomFilename() + ".md", gbom(), "text/markdown");
+});
+$("downloadCsv").addEventListener("click", function () {
+  download(getBomFilename() + ".csv", $("csvOutput").textContent + "\n", "text/csv");
+});
+$("printReport").addEventListener("click", function () { window.print(); });
+
+/* Recalc on KVO field changes */
+["kvoVcpu","kvoRam","kvoDisk","customerName","clRelease","kvoVersion","clmForm","kvoPlatform","kvoHa"].forEach(id => {
+  $(id).addEventListener("input", calculate);
+  $(id).addEventListener("change", calculate);
+});
+
+/* Initial render */
+renderTierTable();
+renderSites();
+calculate();
+</script>
 </body>
 </html>

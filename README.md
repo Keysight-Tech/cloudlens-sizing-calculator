@@ -8,7 +8,7 @@ Keysight CloudLens sensor resource planning calculators for production deploymen
 |---|---|---|
 | **K8s / OpenShift** | https://keysight-tech.github.io/cloudlens-sizing-calculator/ | v3.2 — Live |
 | **VM Sensor** (bare-metal / hypervisor tap agents) | https://keysight-tech.github.io/cloudlens-sizing-calculator/vm/ | v1.0 — Live |
-| **sVM (VMware)** (per-host service VM) | https://keysight-tech.github.io/cloudlens-sizing-calculator/svm/ | Coming soon |
+| **sVM (VMware)** (per-host service VM with KVO + CLM BOM + license math) | https://keysight-tech.github.io/cloudlens-sizing-calculator/svm/ | v1.0 — Live |
 
 ## What each calculator produces
 
@@ -25,6 +25,15 @@ Keysight CloudLens sensor resource planning calculators for production deploymen
 - **Ansible playbook** — fleet-scale deployment automation
 - **Pre-flight script** — validates kernel headers, mirror interface, CLMS reachability, disk space, SELinux
 - **Full Markdown report** — scenario + all artifacts + deployment checklist
+
+### sVM (VMware) Calculator
+- **Multi-site support** — add per-data-center cards with independent ESXi host count, throughput, vSphere version, tap method
+- **Full-stack BOM** — KVO + CLM (per site or shared) + sVM-per-host sizing
+- **Editable tier defaults** — 7 per-host throughput tiers with SBI-anchored defaults; every cell overrideable with Keysight PS values
+- **License pack math** — auto-compute `LIC-CL-VTAP-10` and `LIC-CL-VTAP-100` recommendations
+- **Markdown BOM** — 8 sections: executive summary, per-site sizing, component BOM, license requirements, network requirements, deployment checklist, risks, rollback
+- **CSV for SOW** — per-component rows, ready to drop into Keysight SOW templates
+- **Print to PDF** — clean one-page customer-facing summary
 
 ## Features common to all calculators
 
