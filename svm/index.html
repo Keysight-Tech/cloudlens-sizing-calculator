@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudLens sVM (VMware) Sizing Calculator — Coming Soon — Keysight</title>
+<style>
+  :root {
+    --red: #E90029; --red-dark: #B80020; --dark: #1A1A1A; --gray: #666;
+    --light-gray: #F5F5F5; --border: #E0E0E0; --gold: #D4AF37;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background: #FAFAFA; color: var(--dark); line-height: 1.6; font-size: 16px; padding: 24px;
+    min-height: 100vh;
+  }
+  .container { max-width: 1000px; margin: 0 auto; }
+
+  .suite-nav {
+    background: #111; color: #FFF; padding: 12px 20px; border-radius: 8px;
+    margin-bottom: 24px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .suite-nav .suite-brand {
+    font-weight: 700; color: var(--red); font-size: 14px; letter-spacing: 0.5px; margin-right: 4px;
+    background: white; padding: 4px 10px; border-radius: 4px;
+  }
+  .suite-nav .suite-title { font-size: 14px; color: #CCC; margin-right: auto; }
+  .suite-nav a {
+    color: #EEE; text-decoration: none; font-size: 14px; font-weight: 500;
+    padding: 6px 14px; border-radius: 4px; transition: background 0.15s, color 0.15s;
+  }
+  .suite-nav a:hover { background: rgba(255,255,255,0.1); color: #FFF; }
+  .suite-nav a.active { background: var(--red); color: white; font-weight: 600; }
+  @media (max-width: 700px) {
+    .suite-nav { flex-direction: column; align-items: flex-start; gap: 6px; }
+    .suite-nav .suite-title { margin-right: 0; }
+  }
+
+  header {
+    background: linear-gradient(90deg, var(--red), #C00020); color: white;
+    padding: 32px 40px; border-radius: 8px; margin-bottom: 32px;
+    box-shadow: 0 6px 18px rgba(233,0,41,0.25);
+  }
+  header h1 { font-size: 28px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.3px; }
+  header .subtitle { font-size: 15px; opacity: 0.92; }
+  header .brand {
+    float: right; background: white; color: var(--red); padding: 10px 16px;
+    border-radius: 6px; font-weight: 800; font-size: 16px; letter-spacing: 1px;
+  }
+
+  .card {
+    background: white; border-radius: 8px; padding: 32px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid var(--gold);
+    margin-bottom: 20px;
+  }
+  .card h2 {
+    font-size: 24px; color: #8C6D1F; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .card h2 .soon-tag {
+    background: var(--gold); color: #3A2E0F; font-size: 13px;
+    padding: 4px 12px; border-radius: 10px; font-weight: 700; letter-spacing: 0.5px;
+  }
+  .card p { font-size: 16px; color: var(--dark); margin-bottom: 14px; }
+  .card ul { margin-left: 22px; margin-bottom: 16px; }
+  .card li { font-size: 15px; color: var(--dark); margin-bottom: 8px; }
+  .card li strong { color: var(--red); }
+
+  .features {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 24px 0;
+  }
+  @media (max-width: 700px) { .features { grid-template-columns: 1fr; } }
+  .feature {
+    padding: 16px; background: #FFFBF0; border-radius: 6px;
+    border-left: 3px solid var(--gold);
+  }
+  .feature h3 { font-size: 16px; color: #8C6D1F; margin-bottom: 6px; font-weight: 700; }
+  .feature p { font-size: 14px; color: var(--gray); margin: 0; }
+
+  .cta {
+    display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px;
+  }
+  .btn {
+    background: var(--red); color: white; border: none; padding: 12px 22px;
+    border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: 600;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: var(--red-dark); }
+  .btn.secondary { background: var(--dark); }
+  .btn.secondary:hover { background: #000; }
+
+  .info-box {
+    background: #E8F4FD; border-left: 4px solid #1E6FBA;
+    padding: 16px 20px; font-size: 15px; color: #0A4A8A;
+    border-radius: 4px; margin-top: 20px; line-height: 1.6;
+  }
+  .info-box strong { color: var(--dark); }
+
+  footer {
+    text-align: center; color: var(--gray); font-size: 13px;
+    margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <nav class="suite-nav" aria-label="CloudLens Sizing Suite">
+    <span class="suite-brand">KEYSIGHT</span>
+    <span class="suite-title">CloudLens Sizing Suite</span>
+    <a href="../">K8s / OpenShift</a>
+    <a href="../vm/">VM Sensor</a>
+    <a href="./" class="active" aria-current="page">sVM (VMware)</a>
+  </nav>
+
+  <header>
+    <div class="brand">KEYSIGHT</div>
+    <h1>CloudLens sVM Sizing Calculator</h1>
+    <div class="subtitle">VMware vSphere service VM for per-host PVLAN / port-mirror tap</div>
+  </header>
+
+  <div class="card">
+    <h2>Coming Soon <span class="soon-tag">IN RESEARCH</span></h2>
+    <p>The CloudLens <strong>sVM (service VM)</strong> calculator is currently being built.</p>
+
+    <p>sVM is a fundamentally different deployment model from the VM Sensor or K8s DaemonSet — it runs <strong>one service VM per ESXi host</strong>, taps traffic via vSphere Distributed Switch / NSX port-mirror or PVLAN, and delivers it to the CloudLens Manager. Sizing depends on:</p>
+
+    <ul>
+      <li><strong>Per-host throughput capacity</strong> — NOT per-VM, since one sVM serves all guests on an ESXi host</li>
+      <li><strong>vSphere version + topology</strong> — vSphere 7/8, standard vs distributed switch, NSX-T overlay</li>
+      <li><strong>Mirror source method</strong> — DVMirror, ERSPAN, port-mirror group, PVLAN</li>
+      <li><strong>sVM footprint budget</strong> — typically 2–8 vCPU / 4–16 GB per ESXi host</li>
+      <li><strong>Guest VM density</strong> — high-density hosts (100+ VMs) need larger sVMs</li>
+    </ul>
+
+    <div class="features">
+      <div class="feature">
+        <h3>Per-Host Sizing Tiers</h3>
+        <p>Throughput-driven tables from < 1 Gbps to 100 Gbps per host</p>
+      </div>
+      <div class="feature">
+        <h3>OVA / vApp Generator</h3>
+        <p>Downloadable PowerCLI scripts + OVA deployment manifests</p>
+      </div>
+      <div class="feature">
+        <h3>NSX-T Integration</h3>
+        <p>Port-mirror session YAML for NSX Manager API</p>
+      </div>
+      <div class="feature">
+        <h3>Fleet Rollout</h3>
+        <p>PowerCLI batch deploy for all ESXi hosts in a cluster</p>
+      </div>
+    </div>
+
+    <div class="info-box">
+      <strong>Research in progress:</strong> Validating sizing data against the official Keysight CloudLens Quickstart Guide and CloudLens sVM Deployment Guide. The calculator will ship once the tiers and artifact templates match Keysight's authoritative documentation.
+    </div>
+
+    <div class="cta">
+      <a href="../" class="btn">Use K8s / OpenShift Calculator</a>
+      <a href="../vm/" class="btn secondary">Use VM Sensor Calculator</a>
+    </div>
+  </div>
+
+  <footer>
+    &copy; Keysight Technologies &nbsp;|&nbsp; CloudLens Sizing Suite &nbsp;|&nbsp; Prepared by Brine Ketum, Solutions Engineer &nbsp;|&nbsp; Confidential
+  </footer>
+</div>
+</body>
+</html>

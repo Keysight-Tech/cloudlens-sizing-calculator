@@ -262,6 +262,35 @@
     border-top: 1px solid var(--border);
   }
 
+  /* ========== Top nav (Suite) ========== */
+  .suite-nav {
+    background: #111; color: #FFF;
+    padding: 12px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .suite-nav .suite-brand {
+    font-weight: 700; color: var(--red); font-size: 14px;
+    letter-spacing: 0.5px; margin-right: 4px;
+    background: white; padding: 4px 10px; border-radius: 4px;
+  }
+  .suite-nav .suite-title { font-size: 14px; color: #CCC; margin-right: auto; }
+  .suite-nav a {
+    color: #EEE; text-decoration: none; font-size: 14px; font-weight: 500;
+    padding: 6px 14px; border-radius: 4px; transition: background 0.15s, color 0.15s;
+  }
+  .suite-nav a:hover { background: rgba(255,255,255,0.1); color: #FFF; }
+  .suite-nav a.active { background: var(--red); color: white; font-weight: 600; }
+  .suite-nav a.soon { color: #888; cursor: default; }
+  .suite-nav a.soon:hover { background: transparent; }
+  .suite-nav a.soon::after { content: " (soon)"; font-size: 11px; color: #666; }
+  @media (max-width: 700px) {
+    .suite-nav { flex-direction: column; align-items: flex-start; gap: 6px; }
+    .suite-nav .suite-title { margin-right: 0; }
+  }
+
   /* ========== Print / PDF styles ========== */
   @media print {
     @page { size: Letter; margin: 0.5in; }
@@ -277,7 +306,7 @@
       border-radius: 4px; font-weight: 800; font-size: 11pt; letter-spacing: 1px;
     }
     .btn, .btn-row, #reportSection .info-box { display: none !important; }
-    #reportSection { display: none !important; }
+    #reportSection, .suite-nav { display: none !important; }
     .card, .full-width { box-shadow: none; border: 1px solid #DDD; page-break-inside: avoid; }
     .card h2, .full-width h2 { font-size: 14pt; }
     .field label { font-size: 10pt; }
@@ -304,6 +333,14 @@
 </head>
 <body>
 <div class="container">
+
+  <nav class="suite-nav" aria-label="CloudLens Sizing Suite">
+    <span class="suite-brand">KEYSIGHT</span>
+    <span class="suite-title">CloudLens Sizing Suite</span>
+    <a href="./" class="active" aria-current="page">K8s / OpenShift</a>
+    <a href="./vm/">VM Sensor</a>
+    <a href="./svm/" class="soon">sVM (VMware)</a>
+  </nav>
 
   <header>
     <div class="title-block">

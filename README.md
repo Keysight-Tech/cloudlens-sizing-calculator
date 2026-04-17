@@ -1,26 +1,46 @@
-# CloudLens K8s / OpenShift Sizing Calculator
+# CloudLens Sizing Suite
 
-Production resource planning calculator for Keysight CloudLens sensor deployments on Kubernetes and OpenShift clusters.
+Keysight CloudLens sensor resource planning calculators for production deployments across Kubernetes, bare-metal VMs, and VMware environments.
 
-**Live calculator:** https://keysight-tech.github.io/cloudlens-sizing-calculator/
+## Live Calculators
 
-## Features
+| Calculator | URL | Status |
+|---|---|---|
+| **K8s / OpenShift** | https://keysight-tech.github.io/cloudlens-sizing-calculator/ | v3.2 — Live |
+| **VM Sensor** (bare-metal / hypervisor tap agents) | https://keysight-tech.github.io/cloudlens-sizing-calculator/vm/ | v1.0 — Live |
+| **sVM (VMware)** (per-host service VM) | https://keysight-tech.github.io/cloudlens-sizing-calculator/svm/ | Coming soon |
 
-- Supports DaemonSet, Sidecar, and Hybrid deployment modes
-- Platform-specific overhead (EKS, AKS, GKE, OpenShift, Rancher, self-managed)
+## What each calculator produces
+
+### K8s / OpenShift Calculator
+- **Helm install command** — exact `helm install ...` with all `--set` flags
+- **values.yaml** — version-controlled alternative to inline flags
+- **Sidecar YAML** — inline container spec for CloudLens vTap sidecar injection
+- **OpenShift SCC** — SecurityContextConstraints for sidecar capabilities
+- **Full Markdown report** — scenario + all artifacts + deployment checklist
+
+### VM Sensor Calculator
+- **Install command** — RPM / DEB / MSI / tarball based on OS
+- **sensor.conf** — configuration file with CLMS connection
+- **Ansible playbook** — fleet-scale deployment automation
+- **Pre-flight script** — validates kernel headers, mirror interface, CLMS reachability, disk space, SELinux
+- **Full Markdown report** — scenario + all artifacts + deployment checklist
+
+## Features common to all calculators
+
 - Traffic-tier sizing from < 500 Mbps to 40–100 Gbps
-- Auto-generates ready-to-deploy artifacts:
-  - Helm install command
-  - `values.yaml` for version-controlled deployments
-  - Sidecar container YAML for manual injection
-  - OpenShift `SecurityContextConstraints` for vTap sidecar mode
-- Full deployment report (Markdown + PDF) with contextual checklist
+- Platform-specific overhead multipliers (EKS, AKS, GKE, OpenShift, ESXi, KVM, etc.)
+- Per-node/VM footprint + fleet-wide totals
+- Verdict badges based on cluster overhead %
+- Keysight-branded UI with print-to-PDF support
+- Copy + Download buttons for every generated artifact
+- Runs 100% client-side — zero data leaves the browser
 
 ## Usage
 
-Open the live URL above in any modern browser. All calculations run client-side — no data leaves your machine.
+Open the live URL for the deployment mode you're planning. All calculations run in your browser. No sign-up, no tracking, no data egress.
 
-For offline use, clone this repo and open `index.html` directly.
+For offline use, clone this repo and open `index.html` (or `vm/index.html`) directly.
 
 ## Support
 

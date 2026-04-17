@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudLens VM Sensor Sizing Calculator — Keysight</title>
+<style>
+  :root {
+    --red: #E90029; --red-dark: #B80020; --dark: #1A1A1A; --gray: #666;
+    --light-gray: #F5F5F5; --border: #E0E0E0; --green: #27AE60;
+    --amber: #F39C12; --white: #FFFFFF; --gold: #D4AF37; --blue: #1E6FBA;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background: #FAFAFA; color: var(--dark); line-height: 1.6; font-size: 16px; padding: 24px;
+  }
+  .container { max-width: 1280px; margin: 0 auto; }
+
+  .suite-nav {
+    background: #111; color: #FFF; padding: 12px 20px; border-radius: 8px;
+    margin-bottom: 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .suite-nav .suite-brand {
+    font-weight: 700; color: var(--red); font-size: 14px; letter-spacing: 0.5px; margin-right: 4px;
+    background: white; padding: 4px 10px; border-radius: 4px;
+  }
+  .suite-nav .suite-title { font-size: 14px; color: #CCC; margin-right: auto; }
+  .suite-nav a {
+    color: #EEE; text-decoration: none; font-size: 14px; font-weight: 500;
+    padding: 6px 14px; border-radius: 4px; transition: background 0.15s, color 0.15s;
+  }
+  .suite-nav a:hover { background: rgba(255,255,255,0.1); color: #FFF; }
+  .suite-nav a.active { background: var(--red); color: white; font-weight: 600; }
+  .suite-nav a.soon { color: #888; cursor: default; }
+  .suite-nav a.soon:hover { background: transparent; }
+  .suite-nav a.soon::after { content: " (soon)"; font-size: 11px; color: #666; }
+  @media (max-width: 700px) {
+    .suite-nav { flex-direction: column; align-items: flex-start; gap: 6px; }
+    .suite-nav .suite-title { margin-right: 0; }
+  }
+
+  header {
+    background: linear-gradient(90deg, var(--red), #C00020); color: white;
+    padding: 28px 36px; border-radius: 8px; margin-bottom: 24px;
+    box-shadow: 0 6px 18px rgba(233,0,41,0.25);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
+  }
+  header .title-block h1 { font-size: 28px; font-weight: 700; margin-bottom: 5px; letter-spacing: -0.3px; }
+  header .title-block .subtitle { font-size: 15px; opacity: 0.92; }
+  header .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  header .brand {
+    background: white; color: var(--red); padding: 10px 16px;
+    border-radius: 6px; font-weight: 800; font-size: 16px; letter-spacing: 1px;
+  }
+  header .example-btn {
+    background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.4);
+    padding: 10px 18px; border-radius: 6px; font-weight: 600; font-size: 15px;
+    cursor: pointer; transition: background 0.15s;
+  }
+  header .example-btn:hover { background: rgba(255,255,255,0.25); }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  @media (max-width: 960px) { .grid, .grid-3 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: white; border-radius: 8px; padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid var(--red);
+  }
+  .card h2 {
+    font-size: 22px; color: var(--red); margin-bottom: 18px;
+    border-bottom: 1px solid var(--border); padding-bottom: 10px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card h2 .badge {
+    background: var(--red); color: white; font-size: 12px; padding: 3px 10px;
+    border-radius: 10px; font-weight: 600; letter-spacing: 0.5px;
+  }
+
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block; font-weight: 600; font-size: 16px; color: var(--dark); margin-bottom: 7px;
+  }
+  .field label .hint { font-weight: 400; font-size: 13px; color: var(--gray); margin-left: 6px; }
+  .field input, .field select {
+    width: 100%; padding: 12px 14px; font-size: 16px; font-family: inherit;
+    border: 1px solid var(--border); border-radius: 6px; background: white;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field input:focus, .field select:focus {
+    outline: none; border-color: var(--red); box-shadow: 0 0 0 3px rgba(233,0,41,0.12);
+  }
+  .field input.mono { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 15px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .results-card {
+    background: linear-gradient(135deg, #1A1A1A, #2C3E50); color: white;
+    border-left: 4px solid var(--gold);
+  }
+  .results-card h2 { color: var(--gold); border-color: rgba(255,255,255,0.15); }
+  .metric {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .metric:last-child { border-bottom: none; }
+  .metric .label { font-size: 15px; color: rgba(255,255,255,0.85); }
+  .metric .value { font-size: 18px; font-weight: 700; color: #FFF; font-family: "SF Mono", Menlo, Consolas, monospace; }
+  .metric .value.big { font-size: 28px; color: var(--gold); }
+
+  .verdict {
+    margin-top: 16px; padding: 14px 16px; border-radius: 6px; font-size: 16px; font-weight: 500;
+  }
+  .verdict.good { background: rgba(46,204,113,0.15); border-left: 4px solid #2ECC71; color: #A9DFBF; }
+  .verdict.warn { background: rgba(243,156,18,0.15); border-left: 4px solid #F39C12; color: #F7DC6F; }
+  .verdict.bad  { background: rgba(231,76,60,0.15);  border-left: 4px solid #E74C3C; color: #F5B7B1; }
+  .verdict strong { display: block; margin-bottom: 2px; }
+
+  .full-width {
+    background: white; border-radius: 8px; padding: 24px; margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .full-width h2 {
+    color: var(--red); font-size: 22px; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .full-width .desc { color: var(--gray); margin-bottom: 14px; font-size: 15px; }
+  .full-width h2 .mode-tag {
+    background: var(--dark); color: white; font-size: 12px; padding: 4px 11px;
+    border-radius: 10px; font-weight: 600; letter-spacing: 0.5px;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  table th {
+    background: var(--red); color: white; padding: 11px 13px; text-align: left;
+    font-weight: 600; font-size: 15px;
+  }
+  table td { padding: 11px 13px; border-bottom: 1px solid var(--border); }
+  table tr:nth-child(even) { background: #FAFAFA; }
+  table .highlight { background: #FFF9C4 !important; font-weight: 700; }
+
+  .code-box {
+    background: #1A1A1A; color: #E6E6E6;
+    font-family: "SF Mono", Menlo, Consolas, "Courier New", monospace;
+    font-size: 14px; line-height: 1.65; padding: 18px; border-radius: 6px;
+    overflow-x: auto; white-space: pre; border: 1px solid #2A2A2A;
+  }
+  .code-box.bash { color: #FFCE5C; }
+  .code-box.yaml { color: #9CDCFE; }
+  .code-box.conf { color: #7FD666; }
+  .code-box.powershell { color: #A0C8FF; }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .btn {
+    background: var(--red); color: white; border: none; padding: 10px 18px;
+    border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: 600;
+    transition: background 0.15s, transform 0.05s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { background: var(--red-dark); }
+  .btn:active { transform: translateY(1px); }
+  .btn.secondary { background: var(--dark); }
+  .btn.secondary:hover { background: #000; }
+  .btn.success { background: var(--green); }
+
+  .info-box {
+    background: #FFF8E1; border-left: 4px solid var(--gold);
+    padding: 12px 16px; font-size: 15px; color: #5D4E1F;
+    border-radius: 4px; margin-top: 14px; line-height: 1.55;
+  }
+  .info-box strong { color: var(--dark); }
+
+  footer {
+    text-align: center; color: var(--gray); font-size: 13px;
+    margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border);
+  }
+
+  @media print {
+    @page { size: Letter; margin: 0.5in; }
+    body { padding: 0; background: white; font-size: 11pt; line-height: 1.4; }
+    .container { max-width: 100%; }
+    .suite-nav, header .actions, .btn, .btn-row, #reportSection { display: none !important; }
+    .card, .full-width { box-shadow: none; border: 1px solid #DDD; page-break-inside: avoid; }
+    .card h2, .full-width h2 { font-size: 14pt; }
+    .field input, .field select {
+      border: none; padding: 2px 0; background: transparent;
+      font-weight: 600; color: var(--dark); font-size: 10pt;
+    }
+    .field select { appearance: none; }
+    .metric .value.big { font-size: 14pt; }
+    .code-box {
+      font-size: 8.5pt; color: #000 !important; background: #F5F5F5 !important;
+      border: 1px solid #CCC; page-break-inside: avoid;
+    }
+    .results-card { background: #1A1A1A !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    table th { background: var(--red) !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <nav class="suite-nav" aria-label="CloudLens Sizing Suite">
+    <span class="suite-brand">KEYSIGHT</span>
+    <span class="suite-title">CloudLens Sizing Suite</span>
+    <a href="../">K8s / OpenShift</a>
+    <a href="./" class="active" aria-current="page">VM Sensor</a>
+    <a href="../svm/" class="soon">sVM (VMware)</a>
+  </nav>
+
+  <header>
+    <div class="title-block">
+      <h1>CloudLens VM Sensor Sizing Calculator</h1>
+      <div class="subtitle">Production resource planning &middot; bare-metal / hypervisor VM tap agents &middot; v1.0</div>
+    </div>
+    <div class="actions">
+      <button class="example-btn" id="loadExampleBtn" type="button">Load Example</button>
+      <button class="example-btn" id="resetBtn" type="button">Reset to Defaults</button>
+      <div class="brand">KEYSIGHT</div>
+    </div>
+  </header>
+
+  <div class="grid-3">
+    <div class="card">
+      <h2>VM Infrastructure <span class="badge">PLATFORM</span></h2>
+      <div class="field">
+        <label>Hypervisor <span class="hint">Affects install + mirror method</span></label>
+        <select id="hypervisor">
+          <option value="esxi" selected>VMware ESXi</option>
+          <option value="kvm">KVM / RHV / oVirt</option>
+          <option value="hyperv">Microsoft Hyper-V</option>
+          <option value="nutanix">Nutanix AHV</option>
+          <option value="xen">Xen / XCP-ng</option>
+          <option value="baremetal">Bare Metal (no hypervisor)</option>
+          <option value="cloud">Cloud VM (EC2/Azure/GCE)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Guest OS Family</label>
+        <select id="osFamily">
+          <option value="rhel" selected>RHEL / CentOS / Oracle / Rocky / Alma</option>
+          <option value="ubuntu">Ubuntu / Debian</option>
+          <option value="sles">SUSE / SLES</option>
+          <option value="windows">Windows Server</option>
+          <option value="amazon">Amazon Linux 2 / 2023</option>
+        </select>
+      </div>
+      <div class="field" id="osVersionField">
+        <label>OS Version</label>
+        <select id="osVersion">
+          <option value="rhel9" selected>RHEL/Rocky/Alma 9.x</option>
+          <option value="rhel8">RHEL/Rocky/Alma 8.x</option>
+          <option value="rhel7">RHEL/CentOS 7.x</option>
+        </select>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>VMs to Monitor</label>
+          <input type="number" id="vmCount" value="50" min="1" max="100000">
+        </div>
+        <div class="field">
+          <label>vCPU / VM</label>
+          <input type="number" id="vmVcpu" value="8" min="1" max="128">
+        </div>
+      </div>
+      <div class="field">
+        <label>Memory / VM (GB)</label>
+        <input type="number" id="vmMem" value="32" min="1" max="2048">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Traffic &amp; Mirror <span class="badge">WORKLOAD</span></h2>
+      <div class="field">
+        <label>vNIC Throughput per VM <span class="hint">Actual traffic, not vNIC capacity</span></label>
+        <select id="vmTraffic">
+          <option value="0.05">&lt; 100 Mbps (admin, config, light web)</option>
+          <option value="0.25">100 – 500 Mbps (small web/API)</option>
+          <option value="0.75" selected>500 Mbps – 1 Gbps (standard prod)</option>
+          <option value="2">1 – 3 Gbps (mid-large prod, DB)</option>
+          <option value="4">3 – 5 Gbps (streaming, Kafka)</option>
+          <option value="7.5">5 – 10 Gbps (high-throughput, NFV)</option>
+          <option value="17.5">10 – 25 Gbps (telco edge, DPDK)</option>
+          <option value="32.5">25 – 40 Gbps (DPI, hyperscale)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Mirror Method <span class="hint">How traffic reaches the sensor</span></label>
+        <select id="mirrorMethod">
+          <option value="promiscvnic" selected>Promiscuous vNIC (in-VM capture)</option>
+          <option value="portmirror">Hypervisor port-mirror (VDS/OVS)</option>
+          <option value="span">Physical SPAN / TAP (bare metal)</option>
+          <option value="erspan">ERSPAN (encapsulated remote mirror)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Install Method</label>
+        <select id="installMethod">
+          <option value="package" selected>Package manager (RPM/DEB)</option>
+          <option value="tarball">Tarball / manual</option>
+          <option value="image">Pre-baked OS image (Packer/AMI)</option>
+          <option value="ansible">Ansible playbook (fleet automation)</option>
+          <option value="msi">Windows MSI</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Kernel Headers Strategy <span class="hint">For kernel module (Linux)</span></label>
+        <select id="kernelHeaders">
+          <option value="preinstalled" selected>Pre-installed (kernel-devel/headers)</option>
+          <option value="dkms">DKMS auto-rebuild on kernel update</option>
+          <option value="compile">Compile at install time</option>
+          <option value="na">N/A (Windows / userspace-only)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Debug Logging</label>
+        <select id="debug">
+          <option value="false" selected>false (production)</option>
+          <option value="true">true (troubleshooting)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>CloudLens Connection <span class="badge">CONFIG</span></h2>
+      <div class="field">
+        <label>Sensor Version / Package</label>
+        <input type="text" id="sensorVersion" class="mono" value="6.13.1-372">
+      </div>
+      <div class="field">
+        <label>Sensor Manager Host / IP <span class="hint">CLMS endpoint</span></label>
+        <input type="text" id="sensorServer" class="mono" value="clms.example.com">
+      </div>
+      <div class="field">
+        <label>Project Key <span class="hint">From CLMS portal</span></label>
+        <input type="text" id="projectKey" class="mono" value="&lt;PROJECT_KEY&gt;">
+      </div>
+      <div class="field">
+        <label>Mirror Interface <span class="hint">Which vNIC to tap</span></label>
+        <input type="text" id="mirrorIface" class="mono" value="eth1">
+      </div>
+      <div class="field">
+        <label>Package Repository URL <span class="hint">Optional private repo</span></label>
+        <input type="text" id="repoUrl" class="mono" value="https://downloads.keysight.com/cloudlens/">
+      </div>
+      <div class="field">
+        <label>Custom Tags <span class="hint">Optional, comma-separated k=v</span></label>
+        <input type="text" id="customTags" class="mono" placeholder="datacenter=dc1,env=prod">
+      </div>
+      <div class="field">
+        <label>Systemd Unit Name</label>
+        <input type="text" id="serviceName" class="mono" value="cloudlens-sensor">
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card results-card">
+      <h2>Per-VM Sensor Footprint</h2>
+      <div class="metric"><span class="label">CPU Request</span><span class="value big" id="r_cpu_req">—</span></div>
+      <div class="metric"><span class="label">CPU Limit</span><span class="value" id="r_cpu_lim">—</span></div>
+      <div class="metric"><span class="label">Memory Request</span><span class="value big" id="r_mem_req">—</span></div>
+      <div class="metric"><span class="label">Memory Limit</span><span class="value" id="r_mem_lim">—</span></div>
+      <div class="metric"><span class="label">% of VM vCPU</span><span class="value" id="r_pct_cpu">—</span></div>
+      <div class="metric"><span class="label">% of VM Memory</span><span class="value" id="r_pct_mem">—</span></div>
+    </div>
+
+    <div class="card results-card">
+      <h2>Fleet-Wide Totals</h2>
+      <div class="metric"><span class="label">Total Sensor CPU</span><span class="value big" id="c_cpu">—</span></div>
+      <div class="metric"><span class="label">Total Sensor Memory</span><span class="value big" id="c_mem">—</span></div>
+      <div class="metric"><span class="label">Total Mirrored Traffic</span><span class="value" id="c_traffic">—</span></div>
+      <div class="metric"><span class="label">Fleet Raw Resources</span><span class="value" id="c_fleet_total">—</span></div>
+      <div class="metric"><span class="label">Monitored VMs</span><span class="value" id="c_vm_count">—</span></div>
+      <div class="verdict" id="verdict"><strong id="verdict_title"></strong><span id="verdict_text"></span></div>
+    </div>
+  </div>
+
+  <div class="full-width" id="installSection">
+    <h2>Install Command <span class="mode-tag" id="installTag">RPM</span></h2>
+    <div class="desc">Run on each monitored VM. Copy-paste over SSH (Linux) or PowerShell remote (Windows).</div>
+    <div class="code-box bash" id="installOutput">Loading...</div>
+    <div class="btn-row">
+      <button class="btn" id="copyInstall" type="button">Copy Command</button>
+      <button class="btn secondary" id="downloadInstall" type="button">Download install.sh</button>
+    </div>
+  </div>
+
+  <div class="full-width" id="configSection">
+    <h2>Sensor Configuration File <span class="mode-tag">/etc/cloudlens/sensor.conf</span></h2>
+    <div class="desc">Installed at <code>/etc/cloudlens/sensor.conf</code> (or <code>C:\ProgramData\CloudLens\sensor.conf</code> on Windows).</div>
+    <div class="code-box conf" id="configOutput">Loading...</div>
+    <div class="btn-row">
+      <button class="btn" id="copyConfig" type="button">Copy Config</button>
+      <button class="btn secondary" id="downloadConfig" type="button">Download sensor.conf</button>
+    </div>
+  </div>
+
+  <div class="full-width" id="ansibleSection">
+    <h2>Ansible Playbook (fleet automation) <span class="mode-tag" style="background:var(--blue);">ANSIBLE</span></h2>
+    <div class="desc">Save as <code>cloudlens-sensor.yml</code> and run: <code>ansible-playbook -i inventory cloudlens-sensor.yml</code>. Ideal for deploying to hundreds of VMs.</div>
+    <div class="code-box yaml" id="ansibleOutput">Loading...</div>
+    <div class="btn-row">
+      <button class="btn" id="copyAnsible" type="button">Copy Playbook</button>
+      <button class="btn secondary" id="downloadAnsible" type="button">Download cloudlens-sensor.yml</button>
+    </div>
+  </div>
+
+  <div class="full-width" id="preflightSection">
+    <h2>Pre-Flight Checklist Script <span class="mode-tag" style="background:#6B2FB3;">VALIDATE</span></h2>
+    <div class="desc">Run <strong>before</strong> installing to verify kernel headers, promiscuous mode support, and firewall paths. Fails fast if anything's wrong.</div>
+    <div class="code-box bash" id="preflightOutput">Loading...</div>
+    <div class="btn-row">
+      <button class="btn" id="copyPreflight" type="button">Copy Script</button>
+      <button class="btn secondary" id="downloadPreflight" type="button">Download preflight.sh</button>
+    </div>
+  </div>
+
+  <div class="full-width" id="reportSection" style="border-left: 4px solid var(--gold); background: linear-gradient(180deg, #FFFFFF 0%, #FFFBF0 100%);">
+    <h2 style="color: #8C6D1F;">Download Full Deployment Plan <span class="mode-tag" style="background:var(--gold); color:#3A2E0F;">REPORT</span></h2>
+    <div class="desc">One file with everything: scenario summary, sizing decision, all install commands, Ansible playbook, pre-flight script, and deployment checklist.</div>
+    <div class="btn-row">
+      <button class="btn" id="downloadReport" type="button">Download Markdown Report</button>
+      <button class="btn secondary" id="printReport" type="button">Print / Save as PDF</button>
+      <button class="btn secondary" id="copyReport" type="button">Copy Report to Clipboard</button>
+    </div>
+    <div class="info-box" style="margin-top: 16px;">
+      <strong>Tip:</strong> The markdown report renders in GitHub, GitLab, Slack, VS Code, Confluence, and Jira. For PDF, click <em>Print / Save as PDF</em> and choose "Save as PDF" in your browser's print dialog.
+    </div>
+  </div>
+
+  <div class="full-width">
+    <h2>Reference: VM Sensor Sizing Tiers</h2>
+    <div class="desc">Current selection highlighted. Values assume user-space capture + kernel tap module; DPDK variants use 20-30% less CPU at the high end.</div>
+    <table id="refTable">
+      <thead>
+        <tr>
+          <th>vNIC Throughput</th>
+          <th>CPU Request</th>
+          <th>CPU Limit</th>
+          <th>Memory Request</th>
+          <th>Memory Limit</th>
+          <th>Typical Use Case</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr data-tier="0.05"><td>&lt; 100 Mbps</td><td>100m</td><td>500m</td><td>128 MB</td><td>512 MB</td><td>Admin VMs, config servers</td></tr>
+        <tr data-tier="0.25"><td>100 – 500 Mbps</td><td>250m</td><td>1 vCPU</td><td>256 MB</td><td>1 GB</td><td>Small web / API VMs</td></tr>
+        <tr data-tier="0.75"><td>500 Mbps – 1 Gbps</td><td>500m</td><td>2 vCPU</td><td>512 MB</td><td>2 GB</td><td>Standard production VMs</td></tr>
+        <tr data-tier="2"><td>1 – 3 Gbps</td><td>1 vCPU</td><td>3 vCPU</td><td>1 GB</td><td>3 GB</td><td>Database, app servers</td></tr>
+        <tr data-tier="4"><td>3 – 5 Gbps</td><td>2 vCPU</td><td>4 vCPU</td><td>2 GB</td><td>4 GB</td><td>Streaming, Kafka brokers</td></tr>
+        <tr data-tier="7.5"><td>5 – 10 Gbps</td><td>3 vCPU</td><td>6 vCPU</td><td>3 GB</td><td>6 GB</td><td>High-throughput, NFV</td></tr>
+        <tr data-tier="17.5"><td>10 – 25 Gbps</td><td>4 vCPU</td><td>8 vCPU</td><td>6 GB</td><td>12 GB</td><td>Telco edge, DPDK VMs</td></tr>
+        <tr data-tier="32.5"><td>25 – 40 Gbps</td><td>6 vCPU</td><td>12 vCPU</td><td>10 GB</td><td>20 GB</td><td>DPI, hyperscale</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>
+    &copy; Keysight Technologies &nbsp;|&nbsp; CloudLens VM Sensor Sizing Calculator v1.0 &nbsp;|&nbsp; Prepared by Brine Ketum, Solutions Engineer &nbsp;|&nbsp; Confidential
+  </footer>
+</div>
+
+<script>
+const VM_TIERS = [
+  { gbps: 0.05, cpuReq: 0.1,  cpuLim: 0.5, memReq: 0.128, memLim: 0.512 },
+  { gbps: 0.25, cpuReq: 0.25, cpuLim: 1,   memReq: 0.256, memLim: 1     },
+  { gbps: 0.75, cpuReq: 0.5,  cpuLim: 2,   memReq: 0.512, memLim: 2     },
+  { gbps: 2,    cpuReq: 1,    cpuLim: 3,   memReq: 1,     memLim: 3     },
+  { gbps: 4,    cpuReq: 2,    cpuLim: 4,   memReq: 2,     memLim: 4     },
+  { gbps: 7.5,  cpuReq: 3,    cpuLim: 6,   memReq: 3,     memLim: 6     },
+  { gbps: 17.5, cpuReq: 4,    cpuLim: 8,   memReq: 6,     memLim: 12    },
+  { gbps: 32.5, cpuReq: 6,    cpuLim: 12,  memReq: 10,    memLim: 20    }
+];
+const HYPER_OVERHEAD = {
+  esxi: 1.00, kvm: 1.00, hyperv: 1.06, nutanix: 1.02, xen: 1.04, baremetal: 0.95, cloud: 1.08
+};
+const MIRROR_OVERHEAD = { promiscvnic: 1.00, portmirror: 0.95, span: 0.90, erspan: 1.15 };
+const OS_VERSIONS = {
+  rhel: [
+    { v: "rhel9", label: "RHEL/Rocky/Alma 9.x" },
+    { v: "rhel8", label: "RHEL/Rocky/Alma 8.x" },
+    { v: "rhel7", label: "RHEL/CentOS 7.x" }
+  ],
+  ubuntu: [
+    { v: "ubuntu2404", label: "Ubuntu 24.04 LTS" },
+    { v: "ubuntu2204", label: "Ubuntu 22.04 LTS" },
+    { v: "ubuntu2004", label: "Ubuntu 20.04 LTS" },
+    { v: "debian12",   label: "Debian 12 (Bookworm)" }
+  ],
+  sles: [
+    { v: "sles15", label: "SLES 15 SP5+" },
+    { v: "sles12", label: "SLES 12 SP5" }
+  ],
+  windows: [
+    { v: "ws2022", label: "Windows Server 2022" },
+    { v: "ws2019", label: "Windows Server 2019" },
+    { v: "ws2016", label: "Windows Server 2016" }
+  ],
+  amazon: [
+    { v: "al2023", label: "Amazon Linux 2023" },
+    { v: "al2",    label: "Amazon Linux 2" }
+  ]
+};
+const DEFAULTS = {
+  hypervisor: "esxi", osFamily: "rhel", osVersion: "rhel9",
+  vmCount: 50, vmVcpu: 8, vmMem: 32,
+  vmTraffic: "0.75", mirrorMethod: "promiscvnic", installMethod: "package",
+  kernelHeaders: "preinstalled", debug: "false",
+  sensorVersion: "6.13.1-372", sensorServer: "clms.example.com",
+  projectKey: "<PROJECT_KEY>", mirrorIface: "eth1",
+  repoUrl: "https://downloads.keysight.com/cloudlens/", customTags: "",
+  serviceName: "cloudlens-sensor"
+};
+const EXAMPLE = {
+  hypervisor: "esxi", osFamily: "rhel", osVersion: "rhel8",
+  vmCount: 200, vmVcpu: 16, vmMem: 64,
+  vmTraffic: "2", mirrorMethod: "portmirror", installMethod: "ansible",
+  kernelHeaders: "dkms", debug: "false",
+  sensorVersion: "6.13.1-372", sensorServer: "10.224.133.122",
+  projectKey: "<REDACTED_PROJECT_KEY>", mirrorIface: "eth1",
+  repoUrl: "https://downloads.keysight.com/cloudlens/",
+  customTags: "datacenter=dc1,env=prod,tier=database",
+  serviceName: "cloudlens-sensor"
+};
+
+function $(id) { return document.getElementById(id); }
+function setText(id, text) { $(id).textContent = text; }
+function findTier(tiers, gbps) { return tiers.find(t => t.gbps >= gbps) || tiers[tiers.length - 1]; }
+function fmtCpu(v) { if (v < 1) return Math.round(v * 1000) + "m"; return (Math.round(v * 100) / 100) + " vCPU"; }
+function fmtMem(g) { if (g < 1) return Math.round(g * 1024) + " MB"; if (g < 1000) return (Math.round(g * 10) / 10).toFixed(g < 10 ? 1 : 0) + " GB"; return (g / 1000).toFixed(1) + " TB"; }
+function cpuMilli(v) { return Math.round(v * 1000) + "m"; }
+function memMi(g) { if (g < 1) return Math.round(g * 1024) + "Mi"; return Math.ceil(g) + "Gi"; }
+
+function download(filename, content, mime) {
+  const blob = new Blob([content], { type: mime || "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function wireCopy(btnId, srcId) {
+  $(btnId).addEventListener("click", function () {
+    const text = $(srcId).textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = $(btnId); const orig = btn.textContent;
+      btn.textContent = "\u2713 Copied!"; btn.classList.add("success");
+      setTimeout(() => { btn.textContent = orig; btn.classList.remove("success"); }, 1800);
+    });
+  });
+}
+function applyPreset(p) {
+  Object.keys(p).forEach(k => { const el = $(k); if (el) el.value = p[k]; });
+  populateOsVersions();
+  calculate();
+}
+function populateOsVersions() {
+  const fam = $("osFamily").value;
+  const list = OS_VERSIONS[fam] || [];
+  const sel = $("osVersion");
+  const prev = sel.value;
+  while (sel.firstChild) sel.removeChild(sel.firstChild);
+  list.forEach(o => {
+    const opt = document.createElement("option");
+    opt.value = o.v; opt.textContent = o.label;
+    sel.appendChild(opt);
+  });
+  if (list.find(o => o.v === prev)) sel.value = prev;
+}
+
+function pkgFormat(osFamily) {
+  if (osFamily === "rhel" || osFamily === "sles" || osFamily === "amazon") return "rpm";
+  if (osFamily === "ubuntu") return "deb";
+  if (osFamily === "windows") return "msi";
+  return "tar";
+}
+function pkgFilename(ctx) {
+  const fmt = pkgFormat(ctx.osFamily);
+  if (fmt === "rpm") return "cloudlens-sensor-" + ctx.sensorVersion + ".x86_64.rpm";
+  if (fmt === "deb") return "cloudlens-sensor_" + ctx.sensorVersion + "_amd64.deb";
+  if (fmt === "msi") return "CloudLensSensor-" + ctx.sensorVersion + ".msi";
+  return "cloudlens-sensor-" + ctx.sensorVersion + ".tar.gz";
+}
+
+function calculate() {
+  const hypervisor = $("hypervisor").value;
+  const osFamily = $("osFamily").value;
+  const osVersion = $("osVersion").value;
+  const vmCount = parseInt($("vmCount").value) || 1;
+  const vmVcpu = parseFloat($("vmVcpu").value) || 1;
+  const vmMem = parseFloat($("vmMem").value) || 1;
+  const vmTraffic = parseFloat($("vmTraffic").value);
+  const mirrorMethod = $("mirrorMethod").value;
+  const installMethod = $("installMethod").value;
+  const kernelHeaders = $("kernelHeaders").value;
+  const debug = $("debug").value;
+  const sensorVersion = $("sensorVersion").value.trim() || "6.13.1-372";
+  const sensorServer = $("sensorServer").value.trim() || "clms.example.com";
+  const projectKey = $("projectKey").value.trim() || "<PROJECT_KEY>";
+  const mirrorIface = $("mirrorIface").value.trim() || "eth1";
+  const repoUrl = $("repoUrl").value.trim() || "https://downloads.keysight.com/cloudlens/";
+  const customTags = $("customTags").value.trim();
+  const serviceName = $("serviceName").value.trim() || "cloudlens-sensor";
+
+  const factor = (HYPER_OVERHEAD[hypervisor] || 1) * (MIRROR_OVERHEAD[mirrorMethod] || 1);
+  const tier = findTier(VM_TIERS, vmTraffic);
+
+  const cpuReq = tier.cpuReq * factor;
+  const cpuLim = tier.cpuLim * factor;
+  const memReq = tier.memReq * factor;
+  const memLim = tier.memLim * factor;
+
+  setText("r_cpu_req", fmtCpu(cpuReq));
+  setText("r_cpu_lim", fmtCpu(cpuLim));
+  setText("r_mem_req", fmtMem(memReq));
+  setText("r_mem_lim", fmtMem(memLim));
+  setText("r_pct_cpu", (cpuReq / vmVcpu * 100).toFixed(1) + "%");
+  setText("r_pct_mem", (memReq / vmMem * 100).toFixed(1) + "%");
+
+  const totCpu = cpuReq * vmCount;
+  const totMem = memReq * vmCount;
+  const totTraffic = vmTraffic * vmCount;
+
+  setText("c_cpu", fmtCpu(totCpu));
+  setText("c_mem", fmtMem(totMem));
+  setText("c_traffic", totTraffic.toFixed(1) + " Gbps");
+  setText("c_fleet_total", (vmVcpu * vmCount) + " vCPU / " + (vmMem * vmCount) + " GB");
+  setText("c_vm_count", vmCount + " VMs");
+
+  const pctCpu = (totCpu / (vmVcpu * vmCount) * 100);
+  const pctMem = (totMem / (vmMem * vmCount) * 100);
+  const maxPct = Math.max(pctCpu, pctMem);
+  const v = $("verdict"), vt = $("verdict_title"), vx = $("verdict_text");
+  if (maxPct < 5) {
+    v.className = "verdict good";
+    vt.textContent = "\u2713 Minimal overhead (" + maxPct.toFixed(1) + "%)";
+    vx.textContent = "Very small footprint \u2014 imperceptible on monitored VMs.";
+  } else if (maxPct < 10) {
+    v.className = "verdict good";
+    vt.textContent = "\u2713 Acceptable overhead (" + maxPct.toFixed(1) + "%)";
+    vx.textContent = "Typical production VM tap deployment.";
+  } else if (maxPct < 20) {
+    v.className = "verdict warn";
+    vt.textContent = "\u26A0 Elevated overhead (" + maxPct.toFixed(1) + "%)";
+    vx.textContent = "Review VM sizing; consider traffic filters or DPDK capture mode.";
+  } else {
+    v.className = "verdict bad";
+    vt.textContent = "\u2717 High overhead (" + maxPct.toFixed(1) + "%)";
+    vx.textContent = "VMs are too small for this traffic rate. Resize VMs or deploy dedicated capture appliances.";
+  }
+
+  document.querySelectorAll("#refTable tbody tr").forEach(row => {
+    row.classList.remove("highlight");
+    if (parseFloat(row.dataset.tier) === vmTraffic) row.classList.add("highlight");
+  });
+
+  const ctx = {
+    hypervisor, osFamily, osVersion, vmCount, vmVcpu, vmMem, vmTraffic, tier,
+    mirrorMethod, installMethod, kernelHeaders, debug, sensorVersion, sensorServer,
+    projectKey, mirrorIface, repoUrl, customTags, serviceName,
+    cpuReq, cpuLim, memReq, memLim, totCpu, totMem, totTraffic
+  };
+  generateInstall(ctx);
+  generateConfig(ctx);
+  generateAnsible(ctx);
+  generatePreflight(ctx);
+}
+
+function generateInstall(ctx) {
+  const tag = {
+    rpm: "RPM (YUM/DNF)", deb: "DEB (APT)", msi: "Windows MSI", tar: "Tarball"
+  }[pkgFormat(ctx.osFamily)];
+  $("installTag").textContent = tag;
+
+  const pkg = pkgFilename(ctx);
+  const fmt = pkgFormat(ctx.osFamily);
+  let out;
+  if (ctx.installMethod === "tarball") {
+    out = [
+      "#!/usr/bin/env bash",
+      "# CloudLens VM Sensor install \u2014 tarball method",
+      "set -euo pipefail",
+      "",
+      "curl -fsSL " + ctx.repoUrl + "cloudlens-sensor-" + ctx.sensorVersion + ".tar.gz -o /tmp/cloudlens.tar.gz",
+      "sudo mkdir -p /opt/cloudlens",
+      "sudo tar -xzf /tmp/cloudlens.tar.gz -C /opt/cloudlens",
+      "sudo /opt/cloudlens/install.sh"
+    ].join("\n");
+  } else if (ctx.installMethod === "image") {
+    out = [
+      "# Packer / image-bake install \u2014 add to your Packer provisioner or Dockerfile",
+      "curl -fsSL " + ctx.repoUrl + pkg + " -o /tmp/" + pkg,
+      "sudo " + (fmt === "deb" ? "dpkg -i" : "rpm -ivh") + " /tmp/" + pkg,
+      "# Then bake sensor.conf into the image (see Config section)"
+    ].join("\n");
+  } else if (ctx.installMethod === "ansible") {
+    out = [
+      "# Ansible-driven install \u2014 see 'Ansible Playbook' section below",
+      "# Quick start:",
+      "#   ansible-playbook -i inventory cloudlens-sensor.yml",
+      "",
+      "# Or run ad-hoc on a test host:",
+      "ansible -i inventory test_host -m ansible.builtin.package \\",
+      "  -a \"name=" + pkg + " state=present\" --become"
+    ].join("\n");
+  } else if (fmt === "rpm") {
+    const mgr = (ctx.osFamily === "amazon" || ctx.osVersion === "rhel9" || ctx.osVersion === "rhel8") ? "dnf" : "yum";
+    const hdrs = ctx.kernelHeaders === "preinstalled"
+      ? "sudo " + mgr + " install -y kernel-devel-$(uname -r) kernel-headers-$(uname -r)"
+      : (ctx.kernelHeaders === "dkms"
+        ? "sudo " + mgr + " install -y dkms kernel-devel-$(uname -r)"
+        : "# kernel headers will be fetched at install time");
+    out = [
+      "#!/usr/bin/env bash",
+      "# CloudLens VM Sensor install \u2014 " + ctx.osVersion.toUpperCase(),
+      "set -euo pipefail",
+      "",
+      "# 1. Ensure kernel headers match running kernel",
+      hdrs,
+      "",
+      "# 2. Download the sensor package",
+      "curl -fsSL " + ctx.repoUrl + pkg + " -o /tmp/" + pkg,
+      "",
+      "# 3. Install",
+      "sudo " + mgr + " install -y /tmp/" + pkg,
+      "",
+      "# 4. Configure (see Config section for full sensor.conf)",
+      "sudo tee /etc/cloudlens/sensor.conf > /dev/null <<EOF",
+      "server=" + ctx.sensorServer,
+      "project_key=" + ctx.projectKey,
+      "interface=" + ctx.mirrorIface,
+      "debug=" + ctx.debug,
+      (ctx.customTags ? "custom_tags=" + ctx.customTags : "# custom_tags="),
+      "EOF",
+      "",
+      "# 5. Enable + start the service",
+      "sudo systemctl enable --now " + ctx.serviceName,
+      "sudo systemctl status " + ctx.serviceName + " --no-pager"
+    ].join("\n");
+  } else if (fmt === "deb") {
+    const hdrs = ctx.kernelHeaders === "preinstalled"
+      ? "sudo apt-get install -y linux-headers-$(uname -r)"
+      : (ctx.kernelHeaders === "dkms"
+        ? "sudo apt-get install -y dkms linux-headers-$(uname -r)"
+        : "# kernel headers will be fetched at install time");
+    out = [
+      "#!/usr/bin/env bash",
+      "# CloudLens VM Sensor install \u2014 " + ctx.osVersion.toUpperCase(),
+      "set -euo pipefail",
+      "",
+      "# 1. Update package lists",
+      "sudo apt-get update -y",
+      "",
+      "# 2. Kernel headers",
+      hdrs,
+      "",
+      "# 3. Download sensor package",
+      "curl -fsSL " + ctx.repoUrl + pkg + " -o /tmp/" + pkg,
+      "",
+      "# 4. Install",
+      "sudo dpkg -i /tmp/" + pkg + " || sudo apt-get -f install -y",
+      "",
+      "# 5. Configure",
+      "sudo tee /etc/cloudlens/sensor.conf > /dev/null <<EOF",
+      "server=" + ctx.sensorServer,
+      "project_key=" + ctx.projectKey,
+      "interface=" + ctx.mirrorIface,
+      "debug=" + ctx.debug,
+      (ctx.customTags ? "custom_tags=" + ctx.customTags : "# custom_tags="),
+      "EOF",
+      "",
+      "# 6. Enable + start",
+      "sudo systemctl enable --now " + ctx.serviceName,
+      "sudo systemctl status " + ctx.serviceName + " --no-pager"
+    ].join("\n");
+  } else if (fmt === "msi") {
+    const arr = [
+      "# CloudLens VM Sensor install \u2014 Windows Server (" + ctx.osVersion.toUpperCase() + ")",
+      "# Run in PowerShell as Administrator",
+      "",
+      "$pkg = \"" + pkg + "\"",
+      "$url = \"" + ctx.repoUrl + pkg + "\"",
+      "Invoke-WebRequest -Uri $url -OutFile \"$env:TEMP\\$pkg\"",
+      "",
+      "Start-Process msiexec.exe -Wait -ArgumentList @(",
+      "    \"/i\", \"$env:TEMP\\$pkg\",",
+      "    \"/quiet\", \"/norestart\",",
+      "    \"SERVER=" + ctx.sensorServer + "\",",
+      "    \"PROJECT_KEY=" + ctx.projectKey + "\",",
+      "    \"INTERFACE=" + ctx.mirrorIface + "\",",
+      "    \"DEBUG=" + ctx.debug + "\"" + (ctx.customTags ? "," : "")
+    ];
+    if (ctx.customTags) arr.push("    \"CUSTOM_TAGS=" + ctx.customTags + "\"");
+    arr.push(")", "", "Start-Service -Name \"CloudLensSensor\"", "Get-Service -Name \"CloudLensSensor\"");
+    out = arr.join("\n");
+  }
+  $("installOutput").textContent = out;
+}
+
+function generateConfig(ctx) {
+  const lines = [
+    "# /etc/cloudlens/sensor.conf",
+    "# CloudLens VM Sensor configuration",
+    "",
+    "# CLMS (manager) connection",
+    "server=" + ctx.sensorServer,
+    "project_key=" + ctx.projectKey,
+    "",
+    "# Capture",
+    "interface=" + ctx.mirrorIface,
+    "mirror_method=" + ctx.mirrorMethod,
+    "",
+    "# Logging",
+    "debug=" + ctx.debug,
+    "log_file=/var/log/cloudlens/sensor.log",
+    "log_rotate=daily",
+    "",
+    "# Resources (informational \u2014 enforced by systemd unit / cgroups)",
+    "cpu_limit=" + cpuMilli(ctx.cpuLim),
+    "mem_limit=" + memMi(ctx.memLim)
+  ];
+  if (ctx.customTags) { lines.push(""); lines.push("custom_tags=" + ctx.customTags); }
+  $("configOutput").textContent = lines.join("\n");
+}
+
+function generateAnsible(ctx) {
+  const fmt = pkgFormat(ctx.osFamily);
+  const pkg = pkgFilename(ctx);
+  const isDeb = (fmt === "deb");
+  const lines = [
+    "---",
+    "# cloudlens-sensor.yml",
+    "# Deploy CloudLens VM sensor to a fleet of VMs",
+    "# Usage: ansible-playbook -i inventory cloudlens-sensor.yml",
+    "",
+    "- name: Deploy CloudLens VM Sensor",
+    "  hosts: cloudlens_targets",
+    "  become: true",
+    "  vars:",
+    "    sensor_version: \"" + ctx.sensorVersion + "\"",
+    "    sensor_server: \"" + ctx.sensorServer + "\"",
+    "    project_key: \"" + ctx.projectKey + "\"",
+    "    mirror_iface: \"" + ctx.mirrorIface + "\"",
+    "    repo_url: \"" + ctx.repoUrl + "\"",
+    "    package_name: \"" + pkg + "\"",
+    (ctx.customTags ? "    custom_tags: \"" + ctx.customTags + "\"" : "    custom_tags: \"\""),
+    "",
+    "  tasks:",
+    "    - name: Install kernel headers (Linux)",
+    "      ansible.builtin.package:",
+    "        name: \"{{ item }}\"",
+    "        state: present",
+    "      loop: \"{{ kernel_pkgs[ansible_os_family] | default([]) }}\"",
+    "      vars:",
+    "        kernel_pkgs:",
+    "          RedHat:",
+    "            - \"kernel-devel-{{ ansible_kernel }}\"",
+    "            - \"kernel-headers-{{ ansible_kernel }}\"",
+    "          Debian:",
+    "            - \"linux-headers-{{ ansible_kernel }}\"",
+    "          Suse:",
+    "            - \"kernel-devel\"",
+    "      when: ansible_system == \"Linux\"",
+    "",
+    "    - name: Download CloudLens sensor package",
+    "      ansible.builtin.get_url:",
+    "        url: \"{{ repo_url }}{{ package_name }}\"",
+    "        dest: \"/tmp/{{ package_name }}\"",
+    "        mode: \"0644\"",
+    "",
+    "    - name: Install sensor package (RPM)",
+    "      ansible.builtin.package:",
+    "        name: \"/tmp/{{ package_name }}\"",
+    "        state: present",
+    "        disable_gpg_check: true",
+    "      when: ansible_os_family in [\"RedHat\", \"Suse\"]",
+    ""
+  ];
+  if (isDeb) {
+    lines.push(
+      "    - name: Install sensor package (DEB)",
+      "      ansible.builtin.apt:",
+      "        deb: \"/tmp/{{ package_name }}\"",
+      "        state: present",
+      "      when: ansible_os_family == \"Debian\"",
+      ""
+    );
+  }
+  lines.push(
+    "    - name: Ensure /etc/cloudlens exists",
+    "      ansible.builtin.file:",
+    "        path: /etc/cloudlens",
+    "        state: directory",
+    "        mode: \"0755\"",
+    "      when: ansible_system == \"Linux\"",
+    "",
+    "    - name: Write sensor.conf",
+    "      ansible.builtin.copy:",
+    "        dest: /etc/cloudlens/sensor.conf",
+    "        mode: \"0644\"",
+    "        content: |",
+    "          server={{ sensor_server }}",
+    "          project_key={{ project_key }}",
+    "          interface={{ mirror_iface }}",
+    "          debug=" + ctx.debug,
+    "          {% if custom_tags %}custom_tags={{ custom_tags }}{% endif %}",
+    "      when: ansible_system == \"Linux\"",
+    "      notify: Restart cloudlens sensor",
+    "",
+    "    - name: Enable and start " + ctx.serviceName,
+    "      ansible.builtin.systemd:",
+    "        name: " + ctx.serviceName,
+    "        enabled: true",
+    "        state: started",
+    "        daemon_reload: true",
+    "      when: ansible_system == \"Linux\"",
+    "",
+    "  handlers:",
+    "    - name: Restart cloudlens sensor",
+    "      ansible.builtin.systemd:",
+    "        name: " + ctx.serviceName,
+    "        state: restarted",
+    "      when: ansible_system == \"Linux\""
+  );
+  $("ansibleOutput").textContent = lines.join("\n");
+}
+
+function generatePreflight(ctx) {
+  const lines = [
+    "#!/usr/bin/env bash",
+    "# CloudLens VM Sensor pre-flight checklist",
+    "# Run as root on a candidate VM BEFORE installing.",
+    "set -uo pipefail",
+    "",
+    "FAIL=0",
+    "pass() { echo \"  [PASS] $1\"; }",
+    "fail() { echo \"  [FAIL] $1\"; FAIL=1; }",
+    "warn() { echo \"  [WARN] $1\"; }",
+    "",
+    "echo \"=== 1. OS + kernel ===\"",
+    "uname -a",
+    "[[ -f /etc/os-release ]] && . /etc/os-release && pass \"OS: $PRETTY_NAME\" || fail \"Cannot read /etc/os-release\"",
+    "",
+    "echo \"\"; echo \"=== 2. Kernel headers ===\"",
+    "if [[ -d /lib/modules/$(uname -r)/build ]]; then",
+    "  pass \"Kernel headers present for $(uname -r)\"",
+    "else",
+    "  fail \"Kernel headers missing. Install kernel-devel-$(uname -r) (RHEL) or linux-headers-$(uname -r) (Debian/Ubuntu)\"",
+    "fi",
+    "",
+    "echo \"\"; echo \"=== 3. Mirror interface ===\"",
+    "if ip link show " + ctx.mirrorIface + " >/dev/null 2>&1; then",
+    "  pass \"Interface " + ctx.mirrorIface + " exists\"",
+    "  ip link show " + ctx.mirrorIface + " | grep -q PROMISC && pass \"Promiscuous mode ON\" || warn \"Promiscuous mode OFF \u2014 sensor will enable it at start\"",
+    "else",
+    "  fail \"Interface " + ctx.mirrorIface + " not found. Available: $(ip -br link show | awk '{print $1}' | tr '\\n' ' ')\"",
+    "fi",
+    "",
+    "echo \"\"; echo \"=== 4. CLMS connectivity ===\"",
+    "if command -v nc >/dev/null 2>&1; then",
+    "  nc -zw3 " + ctx.sensorServer + " 443 && pass \"TCP 443 to " + ctx.sensorServer + " OK\" || fail \"Cannot reach " + ctx.sensorServer + ":443\"",
+    "else",
+    "  warn \"netcat (nc) not installed \u2014 cannot test TCP reachability\"",
+    "fi",
+    "",
+    "echo \"\"; echo \"=== 5. DNS / name resolution ===\"",
+    "getent hosts " + ctx.sensorServer + " >/dev/null && pass \"" + ctx.sensorServer + " resolves\" || warn \"" + ctx.sensorServer + " does not resolve (OK if IP)\"",
+    "",
+    "echo \"\"; echo \"=== 6. Disk space ===\"",
+    "AVAIL=$(df -m /var | tail -1 | awk '{print $4}')",
+    "[[ $AVAIL -gt 500 ]] && pass \"/var has ${AVAIL} MB free (>=500 MB)\" || fail \"/var has only ${AVAIL} MB free (need >=500 MB)\"",
+    "",
+    "echo \"\"; echo \"=== 7. CPU + memory ===\"",
+    "CPU=$(nproc)",
+    "MEM_MB=$(free -m | awk '/^Mem:/ {print $2}')",
+    "[[ $CPU -ge 1 ]] && pass \"$CPU vCPU available\" || fail \"$CPU vCPU \u2014 sensor needs >=1\"",
+    "[[ $MEM_MB -ge 512 ]] && pass \"${MEM_MB} MB RAM available\" || fail \"${MEM_MB} MB RAM \u2014 sensor needs >=512 MB\"",
+    "",
+    "echo \"\"; echo \"=== 8. SELinux / AppArmor ===\"",
+    "if command -v getenforce >/dev/null 2>&1; then",
+    "  MODE=$(getenforce)",
+    "  [[ $MODE == \"Enforcing\" ]] && warn \"SELinux enforcing \u2014 sensor policy may need adjustment\" || pass \"SELinux: $MODE\"",
+    "fi",
+    "if command -v aa-status >/dev/null 2>&1; then",
+    "  aa-status --enabled >/dev/null 2>&1 && warn \"AppArmor active \u2014 review profile\" || pass \"AppArmor not active\"",
+    "fi",
+    "",
+    "echo \"\"",
+    "if [[ $FAIL -eq 0 ]]; then",
+    "  echo \"All checks passed. Safe to install.\"",
+    "  exit 0",
+    "else",
+    "  echo \"Pre-flight failed. Fix the issues above before installing.\"",
+    "  exit 1",
+    "fi"
+  ];
+  $("preflightOutput").textContent = lines.join("\n");
+}
+
+function generateMarkdownReport() {
+  const ctx = {
+    hypervisor: $("hypervisor").options[$("hypervisor").selectedIndex].text,
+    osFamily: $("osFamily").options[$("osFamily").selectedIndex].text,
+    osVersion: $("osVersion").options[$("osVersion").selectedIndex].text,
+    vmCount: $("vmCount").value, vmVcpu: $("vmVcpu").value, vmMem: $("vmMem").value,
+    vmTraffic: $("vmTraffic").options[$("vmTraffic").selectedIndex].text,
+    mirrorMethod: $("mirrorMethod").options[$("mirrorMethod").selectedIndex].text,
+    installMethod: $("installMethod").options[$("installMethod").selectedIndex].text,
+    kernelHeaders: $("kernelHeaders").options[$("kernelHeaders").selectedIndex].text,
+    debug: $("debug").value,
+    sensorVersion: $("sensorVersion").value, sensorServer: $("sensorServer").value,
+    projectKey: $("projectKey").value, mirrorIface: $("mirrorIface").value,
+    customTags: $("customTags").value, serviceName: $("serviceName").value,
+    rCpuReq: $("r_cpu_req").textContent, rCpuLim: $("r_cpu_lim").textContent,
+    rMemReq: $("r_mem_req").textContent, rMemLim: $("r_mem_lim").textContent,
+    rPctCpu: $("r_pct_cpu").textContent, rPctMem: $("r_pct_mem").textContent,
+    cCpu: $("c_cpu").textContent, cMem: $("c_mem").textContent,
+    cTraffic: $("c_traffic").textContent, cFleet: $("c_fleet_total").textContent,
+    cVmCount: $("c_vm_count").textContent,
+    verdictTitle: $("verdict_title").textContent, verdictText: $("verdict_text").textContent,
+    install: $("installOutput").textContent,
+    config: $("configOutput").textContent,
+    ansible: $("ansibleOutput").textContent,
+    preflight: $("preflightOutput").textContent
+  };
+  const ts = new Date().toISOString().replace("T", " ").slice(0, 16) + " UTC";
+  const L = [];
+  L.push("# CloudLens VM Sensor Deployment Plan"); L.push("");
+  L.push("> Generated by **CloudLens VM Sensor Sizing Calculator v1.0** on " + ts);
+  L.push("> Prepared by Brine Ketum, Solutions Engineer \u2014 Keysight Technologies"); L.push("");
+  L.push("---"); L.push("");
+  L.push("## 1. Scenario Summary"); L.push("");
+  L.push("| Parameter | Value |"); L.push("|---|---|");
+  L.push("| Hypervisor | " + ctx.hypervisor + " |");
+  L.push("| Guest OS | " + ctx.osFamily + " \u2014 " + ctx.osVersion + " |");
+  L.push("| VMs to Monitor | " + ctx.vmCount + " |");
+  L.push("| VM Size | " + ctx.vmVcpu + " vCPU / " + ctx.vmMem + " GB |");
+  L.push("| Traffic / VM | " + ctx.vmTraffic + " |");
+  L.push("| Mirror Method | " + ctx.mirrorMethod + " |");
+  L.push("| Install Method | " + ctx.installMethod + " |");
+  L.push("| Kernel Headers | " + ctx.kernelHeaders + " |");
+  L.push("| Debug | `" + ctx.debug + "` |"); L.push("");
+  L.push("## 2. CloudLens Connection"); L.push("");
+  L.push("| Setting | Value |"); L.push("|---|---|");
+  L.push("| Sensor Version | `" + ctx.sensorVersion + "` |");
+  L.push("| CLMS Server | `" + ctx.sensorServer + "` |");
+  L.push("| Project Key | `" + ctx.projectKey + "` |");
+  L.push("| Mirror Interface | `" + ctx.mirrorIface + "` |");
+  L.push("| Systemd Service | `" + ctx.serviceName + "` |");
+  if (ctx.customTags) L.push("| Custom Tags | `" + ctx.customTags + "` |");
+  L.push("");
+  L.push("## 3. Sizing Decision"); L.push("");
+  L.push("### Per-VM Sensor Footprint"); L.push("");
+  L.push("| Metric | Value |"); L.push("|---|---|");
+  L.push("| CPU Request | **" + ctx.rCpuReq + "** (" + ctx.rPctCpu + " of VM) |");
+  L.push("| CPU Limit | " + ctx.rCpuLim + " |");
+  L.push("| Memory Request | **" + ctx.rMemReq + "** (" + ctx.rPctMem + " of VM) |");
+  L.push("| Memory Limit | " + ctx.rMemLim + " |"); L.push("");
+  L.push("### Fleet-Wide Totals"); L.push("");
+  L.push("| Metric | Value |"); L.push("|---|---|");
+  L.push("| Total Sensor CPU | **" + ctx.cCpu + "** |");
+  L.push("| Total Sensor Memory | **" + ctx.cMem + "** |");
+  L.push("| Total Mirrored Traffic | " + ctx.cTraffic + " |");
+  L.push("| Fleet Raw Resources | " + ctx.cFleet + " |");
+  L.push("| Monitored VMs | " + ctx.cVmCount + " |"); L.push("");
+  L.push("### Verdict"); L.push("");
+  L.push("> **" + ctx.verdictTitle + "**"); L.push(">");
+  L.push("> " + ctx.verdictText); L.push("");
+  L.push("## 4. Pre-Flight Checklist Script"); L.push("");
+  L.push("Save as `preflight.sh`, `chmod +x preflight.sh`, run as root on a candidate VM BEFORE installing:"); L.push("");
+  L.push("```bash"); L.push(ctx.preflight); L.push("```"); L.push("");
+  L.push("## 5. Install Command"); L.push("");
+  L.push("```bash"); L.push(ctx.install); L.push("```"); L.push("");
+  L.push("## 6. Sensor Configuration File"); L.push("");
+  L.push("`/etc/cloudlens/sensor.conf` on Linux; `C:\\ProgramData\\CloudLens\\sensor.conf` on Windows."); L.push("");
+  L.push("```ini"); L.push(ctx.config); L.push("```"); L.push("");
+  L.push("## 7. Ansible Playbook (fleet automation)"); L.push("");
+  L.push("```yaml"); L.push(ctx.ansible); L.push("```"); L.push("");
+  L.push("## 8. Deployment Checklist"); L.push("");
+  L.push("### Prerequisites");
+  L.push("- [ ] Sensor package available at `" + $("repoUrl").value + pkgFilename({osFamily: $("osFamily").value, sensorVersion: ctx.sensorVersion}) + "`");
+  L.push("- [ ] Network path from VMs to CLMS server `" + ctx.sensorServer + "` (TCP/443)");
+  L.push("- [ ] Project key obtained from CLMS portal and stored securely");
+  L.push("- [ ] Mirror method pre-configured on hypervisor (if using port-mirror/ERSPAN)");
+  L.push("- [ ] Ansible control node has SSH access to all target VMs (if using Ansible)"); L.push("");
+  L.push("### Deployment Steps");
+  L.push("- [ ] Run pre-flight script on 1 pilot VM; fix any failures");
+  L.push("- [ ] Install sensor on pilot VM; verify CLMS handshake in portal");
+  L.push("- [ ] Verify mirrored traffic flowing: `journalctl -u " + ctx.serviceName + " -f`");
+  L.push("- [ ] Deploy to 10-20 VM canary batch; monitor 24h");
+  L.push("- [ ] Roll out to remaining fleet via Ansible"); L.push("");
+  L.push("### Post-Deployment Validation");
+  L.push("- [ ] All " + ctx.cVmCount + " appear online in CLMS portal");
+  L.push("- [ ] Total traffic on CLMS matches expected " + ctx.cTraffic);
+  L.push("- [ ] No VMs showing elevated CPU/memory pressure");
+  L.push("- [ ] Document rollback: `systemctl disable --now " + ctx.serviceName + "` + uninstall package"); L.push("");
+  L.push("## 9. Rollback"); L.push("");
+  L.push("```bash");
+  const fmt = pkgFormat($("osFamily").value);
+  L.push("sudo systemctl disable --now " + ctx.serviceName); L.push("");
+  if (fmt === "rpm") L.push("sudo " + (["rhel9","rhel8"].includes($("osVersion").value) ? "dnf" : "yum") + " remove -y cloudlens-sensor");
+  else if (fmt === "deb") L.push("sudo apt-get remove --purge -y cloudlens-sensor");
+  else if (fmt === "msi") L.push("msiexec /x {PRODUCT-GUID} /quiet  # or via Control Panel > Programs");
+  L.push(""); L.push("sudo rm -rf /etc/cloudlens /var/log/cloudlens");
+  L.push("```"); L.push("");
+  L.push("---"); L.push("");
+  L.push("*Questions? Contact Keysight Solutions Engineering.*"); L.push("");
+  return L.join("\n");
+}
+function getReportFilename() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  const stamp = now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + "-" + pad(now.getHours()) + pad(now.getMinutes());
+  return "cloudlens-vm-sensor-plan-" + $("hypervisor").value + "-" + $("osFamily").value + "-" + stamp + ".md";
+}
+
+wireCopy("copyInstall", "installOutput");
+wireCopy("copyConfig", "configOutput");
+wireCopy("copyAnsible", "ansibleOutput");
+wireCopy("copyPreflight", "preflightOutput");
+
+$("downloadInstall").addEventListener("click", function () {
+  const fmt = pkgFormat($("osFamily").value);
+  const name = (fmt === "msi") ? "install-cloudlens.ps1" : "install-cloudlens.sh";
+  download(name, $("installOutput").textContent + "\n", "text/plain");
+});
+$("downloadConfig").addEventListener("click", function () {
+  download("sensor.conf", $("configOutput").textContent + "\n", "text/plain");
+});
+$("downloadAnsible").addEventListener("click", function () {
+  download("cloudlens-sensor.yml", $("ansibleOutput").textContent + "\n", "text/yaml");
+});
+$("downloadPreflight").addEventListener("click", function () {
+  download("preflight.sh", $("preflightOutput").textContent + "\n", "text/x-shellscript");
+});
+
+$("downloadReport").addEventListener("click", function () {
+  download(getReportFilename(), generateMarkdownReport(), "text/markdown");
+});
+$("printReport").addEventListener("click", function () { window.print(); });
+$("copyReport").addEventListener("click", function () {
+  navigator.clipboard.writeText(generateMarkdownReport()).then(() => {
+    const btn = $("copyReport"); const orig = btn.textContent;
+    btn.textContent = "\u2713 Copied Full Report!"; btn.classList.add("success");
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove("success"); }, 2000);
+  });
+});
+
+$("loadExampleBtn").addEventListener("click", function () { applyPreset(EXAMPLE); });
+$("resetBtn").addEventListener("click", function () { applyPreset(DEFAULTS); });
+$("osFamily").addEventListener("change", function () { populateOsVersions(); calculate(); });
+
+document.querySelectorAll("input, select").forEach(el => {
+  el.addEventListener("input", calculate);
+  el.addEventListener("change", calculate);
+});
+
+populateOsVersions();
+calculate();
+</script>
+</body>
+</html>
