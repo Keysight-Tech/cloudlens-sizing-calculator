@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudLens K8s / OpenShift Sizing Calculator — Keysight</title>
+<style>
+  :root {
+    --red: #E90029;
+    --red-dark: #B80020;
+    --dark: #1A1A1A;
+    --gray: #666;
+    --light-gray: #F5F5F5;
+    --border: #E0E0E0;
+    --green: #27AE60;
+    --amber: #F39C12;
+    --white: #FFFFFF;
+    --gold: #D4AF37;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background: #FAFAFA;
+    color: var(--dark);
+    line-height: 1.6;
+    font-size: 16px;
+    padding: 24px;
+  }
+  .container { max-width: 1280px; margin: 0 auto; }
+
+  header {
+    background: linear-gradient(90deg, var(--red), #C00020);
+    color: white;
+    padding: 28px 36px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    box-shadow: 0 6px 18px rgba(233,0,41,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  header .title-block h1 { font-size: 28px; font-weight: 700; margin-bottom: 5px; letter-spacing: -0.3px; }
+  header .title-block .subtitle { font-size: 15px; opacity: 0.92; }
+  header .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  header .brand {
+    background: white; color: var(--red); padding: 10px 16px;
+    border-radius: 6px; font-weight: 800; font-size: 16px; letter-spacing: 1px;
+  }
+  header .example-btn {
+    background: rgba(255,255,255,0.15); color: white;
+    border: 1px solid rgba(255,255,255,0.4);
+    padding: 10px 18px; border-radius: 6px; font-weight: 600; font-size: 15px;
+    cursor: pointer; transition: background 0.15s;
+  }
+  header .example-btn:hover { background: rgba(255,255,255,0.25); }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  @media (max-width: 960px) {
+    .grid, .grid-3 { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: white;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border-left: 4px solid var(--red);
+  }
+  .card h2 {
+    font-size: 22px;
+    color: var(--red);
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card h2 .badge {
+    background: var(--red); color: white; font-size: 12px; padding: 3px 10px;
+    border-radius: 10px; font-weight: 600; letter-spacing: 0.5px;
+  }
+
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--dark);
+    margin-bottom: 7px;
+  }
+  .field label .hint {
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--gray);
+    margin-left: 6px;
+  }
+  .field input, .field select {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 16px;
+    font-family: inherit;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: white;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field input:focus, .field select:focus {
+    outline: none;
+    border-color: var(--red);
+    box-shadow: 0 0 0 3px rgba(233,0,41,0.12);
+  }
+  .field input.mono { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 15px; }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .results-card {
+    background: linear-gradient(135deg, #1A1A1A, #2C3E50);
+    color: white;
+    border-left: 4px solid var(--gold);
+  }
+  .results-card h2 { color: var(--gold); border-color: rgba(255,255,255,0.15); }
+
+  .metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 11px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .metric:last-child { border-bottom: none; }
+  .metric .label { font-size: 15px; color: rgba(255,255,255,0.85); }
+  .metric .value { font-size: 18px; font-weight: 700; color: #FFF; font-family: "SF Mono", Menlo, Consolas, monospace; }
+  .metric .value.big { font-size: 28px; color: var(--gold); }
+
+  .verdict {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 500;
+  }
+  .verdict.good { background: rgba(46,204,113,0.15); border-left: 4px solid #2ECC71; color: #A9DFBF; }
+  .verdict.warn { background: rgba(243,156,18,0.15); border-left: 4px solid #F39C12; color: #F7DC6F; }
+  .verdict.bad  { background: rgba(231,76,60,0.15);  border-left: 4px solid #E74C3C; color: #F5B7B1; }
+  .verdict strong { display: block; margin-bottom: 2px; }
+
+  .full-width {
+    background: white;
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .full-width h2 {
+    color: var(--red);
+    font-size: 22px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .full-width .desc { color: var(--gray); margin-bottom: 14px; font-size: 15px; }
+  .full-width h2 .mode-tag {
+    background: var(--dark); color: white; font-size: 12px; padding: 4px 11px;
+    border-radius: 10px; font-weight: 600; letter-spacing: 0.5px;
+  }
+
+  .output-section { margin-bottom: 22px; }
+  .output-section:last-child { margin-bottom: 0; }
+  .output-section h3 {
+    font-size: 18px; color: var(--dark); margin-bottom: 8px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .output-section h3 .artifact-type {
+    background: var(--light-gray); color: var(--gray); font-size: 12px;
+    padding: 4px 10px; border-radius: 4px; font-weight: 600;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+  }
+  table th {
+    background: var(--red);
+    color: white;
+    padding: 11px 13px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 15px;
+  }
+  table td {
+    padding: 11px 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  table tr:nth-child(even) { background: #FAFAFA; }
+  table .highlight {
+    background: #FFF9C4 !important;
+    font-weight: 700;
+  }
+
+  .code-box {
+    background: #1A1A1A;
+    color: #E6E6E6;
+    font-family: "SF Mono", Menlo, Consolas, "Courier New", monospace;
+    font-size: 14px;
+    line-height: 1.65;
+    padding: 18px;
+    border-radius: 6px;
+    overflow-x: auto;
+    white-space: pre;
+    border: 1px solid #2A2A2A;
+  }
+  .code-box.helm { color: #7FD666; }
+  .code-box.yaml { color: #9CDCFE; }
+  .code-box.bash { color: #FFCE5C; }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .btn {
+    background: var(--red);
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    transition: background 0.15s, transform 0.05s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn:hover { background: var(--red-dark); }
+  .btn:active { transform: translateY(1px); }
+  .btn.secondary { background: var(--dark); }
+  .btn.secondary:hover { background: #000; }
+  .btn.success { background: var(--green); }
+
+  .info-box {
+    background: #FFF8E1;
+    border-left: 4px solid var(--gold);
+    padding: 12px 16px;
+    font-size: 15px;
+    color: #5D4E1F;
+    border-radius: 4px;
+    margin-top: 14px;
+    line-height: 1.55;
+  }
+  .info-box strong { color: var(--dark); }
+
+  footer {
+    text-align: center;
+    color: var(--gray);
+    font-size: 13px;
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ========== Print / PDF styles ========== */
+  @media print {
+    @page { size: Letter; margin: 0.5in; }
+    body { padding: 0; background: white; font-size: 11pt; line-height: 1.4; }
+    .container { max-width: 100%; }
+    header { box-shadow: none; padding: 16px 20px; margin-bottom: 16px; page-break-after: avoid; }
+    header .actions { display: none; }
+    header .title-block h1 { font-size: 20pt; }
+    header .title-block .subtitle { font-size: 10pt; }
+    header::after {
+      content: "KEYSIGHT";
+      background: white; color: var(--red); padding: 6px 12px;
+      border-radius: 4px; font-weight: 800; font-size: 11pt; letter-spacing: 1px;
+    }
+    .btn, .btn-row, #reportSection .info-box { display: none !important; }
+    #reportSection { display: none !important; }
+    .card, .full-width { box-shadow: none; border: 1px solid #DDD; page-break-inside: avoid; }
+    .card h2, .full-width h2 { font-size: 14pt; }
+    .field label { font-size: 10pt; }
+    .field input, .field select {
+      border: none; padding: 2px 0; background: transparent;
+      font-weight: 600; color: var(--dark); font-size: 10pt;
+    }
+    .field select { -webkit-appearance: none; appearance: none; }
+    .metric .value.big { font-size: 14pt; }
+    .metric .value { font-size: 11pt; }
+    .metric .label { font-size: 9pt; }
+    .code-box {
+      font-size: 8.5pt; line-height: 1.4; color: #000 !important;
+      background: #F5F5F5 !important; border: 1px solid #CCC;
+      page-break-inside: avoid;
+    }
+    .results-card { background: #1A1A1A !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    table { font-size: 9pt; page-break-inside: avoid; }
+    table th { background: var(--red) !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    footer { font-size: 8pt; margin-top: 16px; }
+    .verdict { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="title-block">
+      <h1>CloudLens K8s / OpenShift Sizing Calculator</h1>
+      <div class="subtitle">Production resource planning &middot; auto-generates Helm &amp; Sidecar deployment artifacts &middot; v3.2</div>
+    </div>
+    <div class="actions">
+      <button class="example-btn" id="loadExampleBtn" type="button">Load Airtel Example</button>
+      <button class="example-btn" id="resetBtn" type="button">Reset to Defaults</button>
+      <div class="brand">KEYSIGHT</div>
+    </div>
+  </header>
+
+  <div class="grid-3">
+    <div class="card">
+      <h2>Cluster <span class="badge">INFRA</span></h2>
+      <div class="field">
+        <label>Kubernetes Platform <span class="hint">Sets runtime + overhead</span></label>
+        <select id="platform">
+          <option value="eks">Amazon EKS</option>
+          <option value="aks">Azure AKS</option>
+          <option value="gke">Google GKE</option>
+          <option value="openshift" selected>Red Hat OpenShift</option>
+          <option value="rancher">Rancher / RKE2</option>
+          <option value="self">Self-Managed K8s</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Container Runtime</label>
+        <select id="containerRuntime">
+          <option value="crio" selected>crio (OpenShift default)</option>
+          <option value="containerd">containerd</option>
+          <option value="docker">docker</option>
+        </select>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Worker Nodes</label>
+          <input type="number" id="nodeCount" value="25" min="1" max="5000">
+        </div>
+        <div class="field">
+          <label>Pods / Node</label>
+          <input type="number" id="podsPerNode" value="150" min="1" max="1100">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Node vCPU</label>
+          <input type="number" id="nodeCpu" value="16" min="2" max="256">
+        </div>
+        <div class="field">
+          <label>Node Memory (GB)</label>
+          <input type="number" id="nodeMem" value="64" min="4" max="2048">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Traffic <span class="badge">WORKLOAD</span></h2>
+      <div class="field">
+        <label>Deployment Mode</label>
+        <select id="mode">
+          <option value="daemonset" selected>DaemonSet only (broad visibility)</option>
+          <option value="sidecar">Sidecar only (targeted, per-pod)</option>
+          <option value="hybrid">Hybrid (DaemonSet + selected Sidecars)</option>
+        </select>
+      </div>
+      <div class="field" id="nodeTrafficField">
+        <label>Aggregate Traffic / Node <span class="hint">All pods on the node</span></label>
+        <select id="nodeTraffic">
+          <option value="0.25">&lt; 500 Mbps (dev/test)</option>
+          <option value="0.75">500 Mbps – 1 Gbps (small prod)</option>
+          <option value="2" selected>1 – 3 Gbps (standard prod)</option>
+          <option value="4">3 – 5 Gbps (mid-large prod)</option>
+          <option value="7.5">5 – 10 Gbps (high-density)</option>
+          <option value="17.5">10 – 25 Gbps (telco/hyperscale)</option>
+          <option value="32.5">25 – 40 Gbps (telco core)</option>
+          <option value="70">40 – 100 Gbps (hyperscale)</option>
+        </select>
+      </div>
+      <div class="field" id="sidecarPodsField" style="display:none;">
+        <label>Pods with Sidecar <span class="hint">Total cluster-wide</span></label>
+        <input type="number" id="sidecarPods" value="50" min="0" max="100000">
+      </div>
+      <div class="field" id="sidecarTrafficField" style="display:none;">
+        <label>Traffic / Sidecar Pod</label>
+        <select id="sidecarTraffic">
+          <option value="0.05">&lt; 100 Mbps (auth, config)</option>
+          <option value="0.3" selected>100 – 500 Mbps (web/API)</option>
+          <option value="0.75">500 Mbps – 1 Gbps (payment/DB)</option>
+          <option value="2">1 – 3 Gbps (Kafka/queues)</option>
+          <option value="4">3 – 5 Gbps (streaming)</option>
+          <option value="7.5">5 – 10 Gbps (ingress/telco)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Privileged Mode <span class="hint">Required for DaemonSet on most platforms</span></label>
+        <select id="privileged">
+          <option value="true" selected>true</option>
+          <option value="false">false</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Sensor Debug Logging</label>
+        <select id="debug">
+          <option value="false" selected>false (production)</option>
+          <option value="true">true (troubleshooting)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>CloudLens Connection <span class="badge">HELM</span></h2>
+      <div class="field">
+        <label>Helm Release Name</label>
+        <input type="text" id="releaseName" class="mono" value="cloudlens-agent">
+      </div>
+      <div class="field">
+        <label>Namespace <span class="hint">Where sensor runs</span></label>
+        <input type="text" id="namespace" class="mono" value="cloudlens">
+      </div>
+      <div class="field">
+        <label>Chart Package <span class="hint">.tgz file path</span></label>
+        <input type="text" id="chartPath" class="mono" value="./cloudlens-sensor-6.13.1-408.tgz">
+      </div>
+      <div class="field">
+        <label>Image Repository</label>
+        <input type="text" id="imageRepo" class="mono" value="&lt;your-registry&gt;/cloudlens/sensor">
+      </div>
+      <div class="field">
+        <label>Image Tag</label>
+        <input type="text" id="imageTag" class="mono" value="6.13.1-372">
+      </div>
+      <div class="field">
+        <label>Sensor Manager Host / IP <span class="hint">CLMS endpoint</span></label>
+        <input type="text" id="sensorServer" class="mono" value="clms.example.com">
+      </div>
+      <div class="field">
+        <label>Project Key <span class="hint">From CLMS portal</span></label>
+        <input type="text" id="projectKey" class="mono" value="&lt;PROJECT_KEY&gt;">
+      </div>
+      <div class="field">
+        <label>Custom Tags <span class="hint">Optional, comma-separated k=v</span></label>
+        <input type="text" id="customTags" class="mono" placeholder="app=kube,env=prod">
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card results-card">
+      <h2>Per-Node DaemonSet Footprint</h2>
+      <div class="metric"><span class="label">CPU Request</span><span class="value big" id="r_cpu_req">—</span></div>
+      <div class="metric"><span class="label">CPU Limit</span><span class="value" id="r_cpu_lim">—</span></div>
+      <div class="metric"><span class="label">Memory Request</span><span class="value big" id="r_mem_req">—</span></div>
+      <div class="metric"><span class="label">Memory Limit</span><span class="value" id="r_mem_lim">—</span></div>
+      <div class="metric"><span class="label">% of Node CPU</span><span class="value" id="r_pct_cpu">—</span></div>
+      <div class="metric"><span class="label">% of Node Memory</span><span class="value" id="r_pct_mem">—</span></div>
+    </div>
+
+    <div class="card results-card">
+      <h2>Cluster-Wide Totals</h2>
+      <div class="metric"><span class="label">Total Sensor CPU Request</span><span class="value big" id="c_cpu_req">—</span></div>
+      <div class="metric"><span class="label">Total Sensor CPU Limit</span><span class="value" id="c_cpu_lim">—</span></div>
+      <div class="metric"><span class="label">Total Sensor Memory Request</span><span class="value big" id="c_mem_req">—</span></div>
+      <div class="metric"><span class="label">Total Sensor Memory Limit</span><span class="value" id="c_mem_lim">—</span></div>
+      <div class="metric"><span class="label">Total Mirrored Traffic</span><span class="value" id="c_traffic">—</span></div>
+      <div class="metric"><span class="label">Cluster Total Resources</span><span class="value" id="c_cluster_total">—</span></div>
+      <div class="verdict" id="verdict"><strong id="verdict_title"></strong><span id="verdict_text"></span></div>
+    </div>
+  </div>
+
+  <div class="full-width" id="helmSection">
+    <h2>Helm Install Command <span class="mode-tag" id="helmModeTag">DAEMONSET</span></h2>
+    <div class="desc">Prefilled from your inputs. Copy-paste into your OpenShift / K8s cluster shell after logging in with <span style="font-family:monospace;">oc login</span> / <span style="font-family:monospace;">kubectl config</span>.</div>
+    <div class="code-box helm" id="helmOutput">Loading...</div>
+    <div class="btn-row">
+      <button class="btn" id="copyHelm" type="button">Copy Command</button>
+      <button class="btn secondary" id="downloadHelm" type="button">Download install.sh</button>
+    </div>
+  </div>
+
+  <div class="full-width" id="valuesSection">
+    <h2>values.yaml (alternative to --set flags) <span class="mode-tag">HELM VALUES</span></h2>
+    <div class="desc">Prefer version-controlled values.yaml over inline --set flags for production.</div>
+    <div class="code-box yaml" id="valuesOutput">Loading...</div>
+    <div class="btn-row">
+      <button class="btn" id="copyValues" type="button">Copy values.yaml</button>
+      <button class="btn secondary" id="downloadValues" type="button">Download values.yaml</button>
+    </div>
+  </div>
+
+  <div class="full-width" id="sidecarSection" style="display:none;">
+    <h2>Sidecar Container Injection <span class="mode-tag" style="background:#0E5C9F;">SIDECAR</span></h2>
+    <div class="desc">Paste this <code>cloudlens</code> container block into your application <code>Deployment</code>/<code>StatefulSet</code> pod spec. There is no separate Helm chart for sidecar — CloudLens uses manual injection (shared pod netns).</div>
+    <div class="code-box yaml" id="sidecarOutput">Loading...</div>
+    <div class="btn-row">
+      <button class="btn" id="copySidecar" type="button">Copy Sidecar YAML</button>
+      <button class="btn secondary" id="downloadSidecar" type="button">Download sidecar.yaml</button>
+    </div>
+    <div class="info-box" id="openshiftSccInfo" style="display:none;">
+      <strong>OpenShift note:</strong> Sidecar mode requires an SCC granting <code>SYS_RAWIO</code>, <code>SYS_ADMIN</code>, <code>NET_ADMIN</code> capabilities, bound to your workload's ServiceAccount. SCC snippet is downloadable below.
+      <div class="btn-row">
+        <button class="btn secondary" id="downloadScc" type="button">Download cloudlens-scc.yaml</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="full-width" id="reportSection" style="border-left: 4px solid var(--gold); background: linear-gradient(180deg, #FFFFFF 0%, #FFFBF0 100%);">
+    <h2 style="color: #8C6D1F;">Download Full Deployment Plan <span class="mode-tag" style="background:var(--gold); color:#3A2E0F;">REPORT</span></h2>
+    <div class="desc">One file with everything: scenario summary, sizing decision, all generated commands, deployment checklist. Share with your team or keep as a PoC record.</div>
+    <div class="btn-row">
+      <button class="btn" id="downloadReport" type="button">Download Markdown Report</button>
+      <button class="btn secondary" id="printReport" type="button">Print / Save as PDF</button>
+      <button class="btn secondary" id="copyReport" type="button">Copy Report to Clipboard</button>
+    </div>
+    <div class="info-box" style="margin-top: 16px;">
+      <strong>Tip:</strong> The markdown report renders in GitHub, GitLab, Slack, VS Code, Confluence, and Jira. For PDF, click <em>Print / Save as PDF</em> and choose "Save as PDF" in your browser's print dialog.
+    </div>
+  </div>
+
+  <div class="full-width">
+    <h2>Reference: Sensor Sizing Tiers</h2>
+    <div class="desc">Current selection highlighted. Values are pre-overhead (platform multiplier applied in outputs).</div>
+    <table id="refTable">
+      <thead>
+        <tr>
+          <th>Traffic Tier</th>
+          <th>CPU Request</th>
+          <th>CPU Limit</th>
+          <th>Memory Request</th>
+          <th>Memory Limit</th>
+          <th>Typical Use Case</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr data-tier="0.25"><td>&lt; 500 Mbps</td><td>250m</td><td>1 vCPU</td><td>256 MB</td><td>1 GB</td><td>Dev/test clusters</td></tr>
+        <tr data-tier="0.75"><td>500 Mbps – 1 Gbps</td><td>500m</td><td>2 vCPU</td><td>512 MB</td><td>2 GB</td><td>Small production</td></tr>
+        <tr data-tier="2"><td>1 – 3 Gbps</td><td>1 vCPU</td><td>4 vCPU</td><td>1 GB</td><td>4 GB</td><td>Standard production</td></tr>
+        <tr data-tier="4"><td>3 – 5 Gbps</td><td>2 vCPU</td><td>6 vCPU</td><td>2 GB</td><td>6 GB</td><td>Mid-large production</td></tr>
+        <tr data-tier="7.5"><td>5 – 10 Gbps</td><td>3 vCPU</td><td>8 vCPU</td><td>3 GB</td><td>8 GB</td><td>High-density / fintech</td></tr>
+        <tr data-tier="17.5"><td>10 – 25 Gbps</td><td>4 vCPU</td><td>12 vCPU</td><td>6 GB</td><td>16 GB</td><td>Telco / hyperscale</td></tr>
+        <tr data-tier="32.5"><td>25 – 40 Gbps</td><td>6 vCPU</td><td>16 vCPU</td><td>10 GB</td><td>24 GB</td><td>Telco core</td></tr>
+        <tr data-tier="70"><td>40 – 100 Gbps</td><td>8 vCPU</td><td>24 vCPU</td><td>16 GB</td><td>32 GB</td><td>Hyperscale</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>
+    &copy; Keysight Technologies &nbsp;|&nbsp; CloudLens Sensor Resource Planning Calculator v3.2 &nbsp;|&nbsp; Prepared by Brine Ketum, Solutions Engineer &nbsp;|&nbsp; Confidential
+  </footer>
+</div>
+
+<script>
+/* ===================== DATA ===================== */
+const DS_TIERS = [
+  { gbps: 0.25, cpuReq: 0.25, cpuLim: 1,  memReq: 0.256, memLim: 1  },
+  { gbps: 0.75, cpuReq: 0.5,  cpuLim: 2,  memReq: 0.512, memLim: 2  },
+  { gbps: 2,    cpuReq: 1,    cpuLim: 4,  memReq: 1,     memLim: 4  },
+  { gbps: 4,    cpuReq: 2,    cpuLim: 6,  memReq: 2,     memLim: 6  },
+  { gbps: 7.5,  cpuReq: 3,    cpuLim: 8,  memReq: 3,     memLim: 8  },
+  { gbps: 17.5, cpuReq: 4,    cpuLim: 12, memReq: 6,     memLim: 16 },
+  { gbps: 32.5, cpuReq: 6,    cpuLim: 16, memReq: 10,    memLim: 24 },
+  { gbps: 70,   cpuReq: 8,    cpuLim: 24, memReq: 16,    memLim: 32 }
+];
+const SC_TIERS = [
+  { gbps: 0.05, cpuReq: 0.1,  cpuLim: 0.5, memReq: 0.128, memLim: 0.512 },
+  { gbps: 0.3,  cpuReq: 0.25, cpuLim: 1,   memReq: 0.256, memLim: 1     },
+  { gbps: 0.75, cpuReq: 0.5,  cpuLim: 2,   memReq: 0.512, memLim: 2     },
+  { gbps: 2,    cpuReq: 1,    cpuLim: 4,   memReq: 1,     memLim: 4     },
+  { gbps: 4,    cpuReq: 2,    cpuLim: 6,   memReq: 2,     memLim: 6     },
+  { gbps: 7.5,  cpuReq: 3,    cpuLim: 8,   memReq: 4,     memLim: 10    }
+];
+const PLATFORM_OVERHEAD = { eks: 1.00, aks: 1.04, gke: 1.00, openshift: 1.08, rancher: 1.02, self: 1.05 };
+const DEFAULTS = {
+  platform: "openshift", containerRuntime: "crio", nodeCount: 25, podsPerNode: 150,
+  nodeCpu: 16, nodeMem: 64, mode: "daemonset", nodeTraffic: "2", sidecarPods: 50,
+  sidecarTraffic: "0.3", privileged: "true", debug: "false",
+  releaseName: "cloudlens-agent", namespace: "cloudlens",
+  chartPath: "./cloudlens-sensor-6.13.1-408.tgz",
+  imageRepo: "<your-registry>/cloudlens/sensor", imageTag: "6.13.1-372",
+  sensorServer: "clms.example.com", projectKey: "<PROJECT_KEY>", customTags: ""
+};
+const AIRTEL_EXAMPLE = {
+  platform: "openshift", containerRuntime: "crio", nodeCount: 150, podsPerNode: 200,
+  nodeCpu: 32, nodeMem: 128, mode: "daemonset", nodeTraffic: "4", sidecarPods: 0,
+  sidecarTraffic: "0.3", privileged: "true", debug: "false",
+  releaseName: "cloudlens-agent", namespace: "knative-serving",
+  chartPath: "./cloudlens-sensor-6.13.1-408.tgz",
+  imageRepo: "cellregistry.india.airtel.itm/mycloud_openshift/sensor", imageTag: "6.13.1-372",
+  sensorServer: "10.224.133.122", projectKey: "<REDACTED_PROJECT_KEY>", customTags: "customer=airtel,env=prod"
+};
+
+/* ===================== HELPERS ===================== */
+function $(id) { return document.getElementById(id); }
+function setText(id, text) { $(id).textContent = text; }
+function findTier(tiers, gbps) { return tiers.find(t => t.gbps >= gbps) || tiers[tiers.length - 1]; }
+function fmtCpu(v) { if (v < 1) return Math.round(v * 1000) + "m"; return (Math.round(v * 100) / 100) + " vCPU"; }
+function fmtMem(g) { if (g < 1) return Math.round(g * 1024) + " MB"; if (g < 1000) return (Math.round(g * 10) / 10).toFixed(g < 10 ? 1 : 0) + " GB"; return (g / 1000).toFixed(1) + " TB"; }
+function cpuStr(v) { if (v < 1) return Math.round(v * 1000) + "m"; return String(Math.round(v * 100) / 100); }
+function memStr(g) { if (g < 1) return Math.round(g * 1024) + "Mi"; return (Math.round(g * 100) / 100) + "Gi"; }
+
+function download(filename, content, mime) {
+  const blob = new Blob([content], { type: mime || "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function wireCopy(btnId, srcId) {
+  $(btnId).addEventListener("click", function () {
+    const text = $(srcId).textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = $(btnId);
+      const orig = btn.textContent;
+      btn.textContent = "\u2713 Copied!";
+      btn.classList.add("success");
+      setTimeout(() => { btn.textContent = orig; btn.classList.remove("success"); }, 1800);
+    });
+  });
+}
+
+function applyPreset(preset) {
+  Object.keys(preset).forEach(k => {
+    const el = $(k);
+    if (el) el.value = preset[k];
+  });
+  calculate();
+}
+
+/* ===================== MAIN CALC ===================== */
+function calculate() {
+  const platform = $("platform").value;
+  const containerRuntime = $("containerRuntime").value;
+  const nodeCount = parseInt($("nodeCount").value) || 1;
+  const nodeCpu = parseFloat($("nodeCpu").value) || 2;
+  const nodeMem = parseFloat($("nodeMem").value) || 4;
+  const nodeTraffic = parseFloat($("nodeTraffic").value);
+  const mode = $("mode").value;
+  const sidecarPods = parseInt($("sidecarPods").value) || 0;
+  const sidecarTraffic = parseFloat($("sidecarTraffic").value);
+  const privileged = $("privileged").value;
+  const debug = $("debug").value;
+  const releaseName = $("releaseName").value.trim() || "cloudlens-agent";
+  const namespace = $("namespace").value.trim() || "cloudlens";
+  const chartPath = $("chartPath").value.trim() || "./cloudlens-sensor.tgz";
+  const imageRepo = $("imageRepo").value.trim() || "<your-registry>/cloudlens/sensor";
+  const imageTag = $("imageTag").value.trim() || "latest";
+  const sensorServer = $("sensorServer").value.trim() || "clms.example.com";
+  const projectKey = $("projectKey").value.trim() || "<PROJECT_KEY>";
+  const customTags = $("customTags").value.trim();
+
+  /* ---- Toggle visibility ---- */
+  const showNodeTraffic = (mode === "daemonset" || mode === "hybrid");
+  const showSidecar = (mode === "sidecar" || mode === "hybrid");
+  $("nodeTrafficField").style.display = showNodeTraffic ? "block" : "none";
+  $("sidecarPodsField").style.display = showSidecar ? "block" : "none";
+  $("sidecarTrafficField").style.display = showSidecar ? "block" : "none";
+
+  $("helmSection").style.display = (mode === "daemonset" || mode === "hybrid") ? "block" : "none";
+  $("valuesSection").style.display = (mode === "daemonset" || mode === "hybrid") ? "block" : "none";
+  $("sidecarSection").style.display = (mode === "sidecar" || mode === "hybrid") ? "block" : "none";
+  $("openshiftSccInfo").style.display = (showSidecar && platform === "openshift") ? "block" : "none";
+
+  /* ---- Compute resources ---- */
+  const overhead = PLATFORM_OVERHEAD[platform];
+  const dsTier = findTier(DS_TIERS, nodeTraffic);
+  const scTier = findTier(SC_TIERS, sidecarTraffic);
+
+  let cpuReq = 0, cpuLim = 0, memReq = 0, memLim = 0;
+  if (mode === "daemonset" || mode === "hybrid") {
+    cpuReq = dsTier.cpuReq * overhead;
+    cpuLim = dsTier.cpuLim * overhead;
+    memReq = dsTier.memReq * overhead;
+    memLim = dsTier.memLim * overhead;
+  }
+
+  setText("r_cpu_req", fmtCpu(cpuReq));
+  setText("r_cpu_lim", fmtCpu(cpuLim));
+  setText("r_mem_req", fmtMem(memReq));
+  setText("r_mem_lim", fmtMem(memLim));
+  setText("r_pct_cpu", (cpuReq / nodeCpu * 100).toFixed(1) + "%");
+  setText("r_pct_mem", (memReq / nodeMem * 100).toFixed(1) + "%");
+
+  let totalCpuReq = cpuReq * nodeCount;
+  let totalCpuLim = cpuLim * nodeCount;
+  let totalMemReq = memReq * nodeCount;
+  let totalMemLim = memLim * nodeCount;
+
+  let scCpuReq = 0, scCpuLim = 0, scMemReq = 0, scMemLim = 0;
+  if (showSidecar) {
+    scCpuReq = scTier.cpuReq * overhead;
+    scCpuLim = scTier.cpuLim * overhead;
+    scMemReq = scTier.memReq * overhead;
+    scMemLim = scTier.memLim * overhead;
+    totalCpuReq += scCpuReq * sidecarPods;
+    totalCpuLim += scCpuLim * sidecarPods;
+    totalMemReq += scMemReq * sidecarPods;
+    totalMemLim += scMemLim * sidecarPods;
+  }
+
+  setText("c_cpu_req", fmtCpu(totalCpuReq));
+  setText("c_cpu_lim", fmtCpu(totalCpuLim));
+  setText("c_mem_req", fmtMem(totalMemReq));
+  setText("c_mem_lim", fmtMem(totalMemLim));
+
+  const totalTraffic = (showNodeTraffic ? nodeTraffic * nodeCount : 0)
+                     + (showSidecar ? sidecarTraffic * sidecarPods : 0);
+  setText("c_traffic", totalTraffic.toFixed(1) + " Gbps");
+
+  const clusterCpu = nodeCpu * nodeCount;
+  const clusterMem = nodeMem * nodeCount;
+  setText("c_cluster_total", clusterCpu + " vCPU / " + clusterMem + " GB");
+
+  const clusterPctCpu = (totalCpuReq / clusterCpu * 100);
+  const clusterPctMem = (totalMemReq / clusterMem * 100);
+  const maxPct = Math.max(clusterPctCpu, clusterPctMem);
+
+  /* ---- Verdict ---- */
+  const v = $("verdict"), vt = $("verdict_title"), vx = $("verdict_text");
+  if (maxPct < 10) {
+    v.className = "verdict good";
+    vt.textContent = "\u2713 Excellent overhead (" + maxPct.toFixed(1) + "%)";
+    vx.textContent = "Sensor footprint is well within acceptable limits for production.";
+  } else if (maxPct < 20) {
+    v.className = "verdict good";
+    vt.textContent = "\u2713 Acceptable overhead (" + maxPct.toFixed(1) + "%)";
+    vx.textContent = "Typical production deployment \u2014 consistent with other monitoring agents.";
+  } else if (maxPct < 35) {
+    v.className = "verdict warn";
+    vt.textContent = "\u26A0 Elevated overhead (" + maxPct.toFixed(1) + "%)";
+    vx.textContent = "Consider larger nodes, traffic filtering, or Sidecar mode for targeted visibility.";
+  } else {
+    v.className = "verdict bad";
+    vt.textContent = "\u2717 High overhead (" + maxPct.toFixed(1) + "%)";
+    vx.textContent = "Recommend larger instance types or aggressive traffic filters before production.";
+  }
+
+  document.querySelectorAll("#refTable tbody tr").forEach(row => {
+    row.classList.remove("highlight");
+    const activeTier = showNodeTraffic ? nodeTraffic : (showSidecar ? sidecarTraffic : null);
+    if (activeTier !== null && parseFloat(row.dataset.tier) === activeTier) row.classList.add("highlight");
+  });
+
+  /* ---- Mode tag on Helm section ---- */
+  $("helmModeTag").textContent = (mode === "hybrid") ? "DAEMONSET (+ SIDECAR BELOW)" : "DAEMONSET";
+
+  /* ---- Generate artifacts ---- */
+  generateHelm({
+    releaseName, chartPath, namespace, imageRepo, imageTag, sensorServer, projectKey,
+    privileged, containerRuntime, debug, customTags, cpuReq, cpuLim, memReq, memLim
+  });
+  generateValues({
+    imageRepo, imageTag, sensorServer, projectKey, privileged, containerRuntime, debug,
+    customTags, cpuReq, cpuLim, memReq, memLim
+  });
+  if (showSidecar) {
+    generateSidecar({
+      imageRepo, imageTag, sensorServer, projectKey, customTags,
+      scCpuReq, scCpuLim, scMemReq, scMemLim, isOpenShift: (platform === "openshift")
+    });
+  }
+}
+
+/* ===================== ARTIFACT GENERATION ===================== */
+function generateHelm(p) {
+  const lines = [
+    "# CloudLens Sensor — DaemonSet install via Helm",
+    "# Generated by CloudLens K8s Sizing Calculator",
+    "",
+    "helm install " + p.releaseName + " " + p.chartPath + " -n " + p.namespace + " --create-namespace \\",
+    "  --set image.repository=" + p.imageRepo + " \\",
+    "  --set image.tag=" + p.imageTag + " \\",
+    "  --set sensor.server=" + p.sensorServer + " \\",
+    "  --set sensor.projectKey=" + p.projectKey + " \\",
+    "  --set privileged=" + p.privileged + " \\",
+    "  --set containerRuntime=" + p.containerRuntime + " \\",
+    "  --set sensor.debug=" + p.debug + " \\",
+    "  --set resources.requests.cpu=" + cpuStr(p.cpuReq) + " \\",
+    "  --set resources.requests.memory=" + memStr(p.memReq) + " \\",
+    "  --set resources.limits.cpu=" + cpuStr(p.cpuLim) + " \\",
+    "  --set resources.limits.memory=" + memStr(p.memLim)
+  ];
+  if (p.customTags) {
+    lines[lines.length - 1] += " \\";
+    lines.push("  --set sensor.customTags=\"" + p.customTags + "\"");
+  }
+  $("helmOutput").textContent = lines.join("\n");
+}
+
+function generateValues(p) {
+  const lines = [
+    "# values.yaml — CloudLens Sensor DaemonSet",
+    "# Apply with: helm install <release> <chart.tgz> -n <ns> -f values.yaml",
+    "",
+    "image:",
+    "  repository: " + p.imageRepo,
+    "  tag: " + p.imageTag,
+    "",
+    "privileged: " + p.privileged,
+    "containerRuntime: " + p.containerRuntime,
+    "",
+    "sensor:",
+    "  server: " + p.sensorServer,
+    "  projectKey: " + p.projectKey,
+    "  debug: " + p.debug
+  ];
+  if (p.customTags) lines.push("  customTags: \"" + p.customTags + "\"");
+  lines.push(
+    "",
+    "resources:",
+    "  requests:",
+    "    cpu: " + cpuStr(p.cpuReq),
+    "    memory: " + memStr(p.memReq),
+    "  limits:",
+    "    cpu: " + cpuStr(p.cpuLim),
+    "    memory: " + memStr(p.memLim)
+  );
+  $("valuesOutput").textContent = lines.join("\n");
+}
+
+function generateSidecar(p) {
+  const lines = [
+    "# CloudLens vTap Sidecar — inject into your application Deployment/StatefulSet",
+    "# Paste the 'cloudlens' container block under spec.template.spec.containers",
+    "",
+    "apiVersion: apps/v1",
+    "kind: Deployment",
+    "metadata:",
+    "  name: <your-app>",
+    "  namespace: <your-app-namespace>",
+    "spec:",
+    "  replicas: 1",
+    "  selector:",
+    "    matchLabels:",
+    "      app: <your-app>",
+    "  template:",
+    "    metadata:",
+    "      labels:",
+    "        app: <your-app>",
+    "      annotations:",
+    "        cloudlens.keysight.com/inject: \"true\"",
+    "    spec:",
+    "      serviceAccountName: <sa-with-cloudlens-scc>",
+    "      containers:",
+    "      - name: <your-app>                 # your application container",
+    "        image: <your-app-image>",
+    "      - name: cloudlens                  # CloudLens vTap sidecar",
+    "        image: " + p.imageRepo + ":" + p.imageTag,
+    "        args:",
+    "          - \"--server\"",
+    "          - \"" + p.sensorServer + "\"",
+    "          - \"--apikey\"",
+    "          - \"" + p.projectKey + "\""
+  ];
+  if (p.customTags) {
+    lines.push("          - \"--custom_tags\"");
+    lines.push("          - \"" + p.customTags + "\"");
+  }
+  lines.push(
+    "          - \"--accept_eula\"",
+    "          - \"y\"",
+    "        securityContext:",
+    "          capabilities:",
+    "            add:",
+    "              - SYS_RAWIO",
+    "              - SYS_ADMIN",
+    "              - NET_ADMIN",
+    "        resources:",
+    "          requests:",
+    "            cpu: " + cpuStr(p.scCpuReq),
+    "            memory: " + memStr(p.scMemReq),
+    "          limits:",
+    "            cpu: " + cpuStr(p.scCpuLim),
+    "            memory: " + memStr(p.scMemLim)
+  );
+  $("sidecarOutput").textContent = lines.join("\n");
+}
+
+function sccYaml() {
+  return [
+    "# CloudLens vTap SecurityContextConstraints (OpenShift)",
+    "# Apply: oc apply -f cloudlens-scc.yaml",
+    "# Bind:  oc adm policy add-scc-to-user cloudlens-vtap -z <service-account> -n <namespace>",
+    "",
+    "apiVersion: security.openshift.io/v1",
+    "kind: SecurityContextConstraints",
+    "metadata:",
+    "  name: cloudlens-vtap",
+    "allowHostNetwork: false",
+    "allowHostPID: false",
+    "allowPrivilegedContainer: false",
+    "allowedCapabilities:",
+    "  - SYS_RAWIO",
+    "  - SYS_ADMIN",
+    "  - NET_ADMIN",
+    "defaultAddCapabilities: []",
+    "fsGroup:",
+    "  type: RunAsAny",
+    "runAsUser:",
+    "  type: RunAsAny",
+    "seLinuxContext:",
+    "  type: RunAsAny",
+    "supplementalGroups:",
+    "  type: RunAsAny",
+    "users: []",
+    "volumes:",
+    "  - configMap",
+    "  - downwardAPI",
+    "  - emptyDir",
+    "  - persistentVolumeClaim",
+    "  - projected",
+    "  - secret"
+  ].join("\n");
+}
+
+/* ===================== FULL REPORT GENERATION ===================== */
+function getScenario() {
+  const modeLabels = {
+    daemonset: "DaemonSet only (broad visibility)",
+    sidecar: "Sidecar only (targeted, per-pod)",
+    hybrid: "Hybrid (DaemonSet + selected Sidecars)"
+  };
+  const platformLabels = {
+    eks: "Amazon EKS", aks: "Azure AKS", gke: "Google GKE",
+    openshift: "Red Hat OpenShift", rancher: "Rancher / RKE2", self: "Self-Managed K8s"
+  };
+  const trafficLabels = {
+    "0.25": "< 500 Mbps (dev/test)", "0.75": "500 Mbps – 1 Gbps (small prod)",
+    "2": "1 – 3 Gbps (standard prod)", "4": "3 – 5 Gbps (mid-large prod)",
+    "7.5": "5 – 10 Gbps (high-density)", "17.5": "10 – 25 Gbps (telco/hyperscale)",
+    "32.5": "25 – 40 Gbps (telco core)", "70": "40 – 100 Gbps (hyperscale)"
+  };
+  return {
+    platform: $("platform").value,
+    platformLabel: platformLabels[$("platform").value],
+    containerRuntime: $("containerRuntime").value,
+    mode: $("mode").value,
+    modeLabel: modeLabels[$("mode").value],
+    nodeCount: $("nodeCount").value,
+    podsPerNode: $("podsPerNode").value,
+    nodeCpu: $("nodeCpu").value,
+    nodeMem: $("nodeMem").value,
+    nodeTraffic: $("nodeTraffic").value,
+    nodeTrafficLabel: trafficLabels[$("nodeTraffic").value] || $("nodeTraffic").value + " Gbps",
+    sidecarPods: $("sidecarPods").value,
+    sidecarTraffic: $("sidecarTraffic").value,
+    privileged: $("privileged").value,
+    debug: $("debug").value,
+    releaseName: $("releaseName").value,
+    namespace: $("namespace").value,
+    chartPath: $("chartPath").value,
+    imageRepo: $("imageRepo").value,
+    imageTag: $("imageTag").value,
+    sensorServer: $("sensorServer").value,
+    projectKey: $("projectKey").value,
+    customTags: $("customTags").value,
+    /* computed metrics */
+    rCpuReq: $("r_cpu_req").textContent,
+    rCpuLim: $("r_cpu_lim").textContent,
+    rMemReq: $("r_mem_req").textContent,
+    rMemLim: $("r_mem_lim").textContent,
+    rPctCpu: $("r_pct_cpu").textContent,
+    rPctMem: $("r_pct_mem").textContent,
+    cCpuReq: $("c_cpu_req").textContent,
+    cCpuLim: $("c_cpu_lim").textContent,
+    cMemReq: $("c_mem_req").textContent,
+    cMemLim: $("c_mem_lim").textContent,
+    cTraffic: $("c_traffic").textContent,
+    cClusterTotal: $("c_cluster_total").textContent,
+    verdictTitle: $("verdict_title").textContent,
+    verdictText: $("verdict_text").textContent,
+    helmOutput: $("helmOutput").textContent,
+    valuesOutput: $("valuesOutput").textContent,
+    sidecarOutput: $("sidecarOutput").textContent
+  };
+}
+
+function generateMarkdownReport() {
+  const s = getScenario();
+  const now = new Date();
+  const ts = now.toISOString().replace("T", " ").slice(0, 16) + " UTC";
+  const isOpenShift = (s.platform === "openshift");
+  const hasDaemonset = (s.mode === "daemonset" || s.mode === "hybrid");
+  const hasSidecar = (s.mode === "sidecar" || s.mode === "hybrid");
+
+  const lines = [];
+  lines.push("# CloudLens Deployment Plan");
+  lines.push("");
+  lines.push("> Generated by **CloudLens K8s Sizing Calculator v3.2** on " + ts);
+  lines.push("> Prepared by Brine Ketum, Solutions Engineer — Keysight Technologies");
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+  lines.push("## 1. Scenario Summary");
+  lines.push("");
+  lines.push("| Parameter | Value |");
+  lines.push("|---|---|");
+  lines.push("| Kubernetes Platform | " + s.platformLabel + " |");
+  lines.push("| Container Runtime | `" + s.containerRuntime + "` |");
+  lines.push("| Deployment Mode | " + s.modeLabel + " |");
+  lines.push("| Worker Nodes | " + s.nodeCount + " |");
+  lines.push("| Node Size | " + s.nodeCpu + " vCPU / " + s.nodeMem + " GB |");
+  lines.push("| Pods per Node (avg) | " + s.podsPerNode + " |");
+  if (hasDaemonset) lines.push("| Traffic per Node | " + s.nodeTrafficLabel + " |");
+  if (hasSidecar) {
+    lines.push("| Pods with Sidecar | " + s.sidecarPods + " |");
+    lines.push("| Traffic per Sidecar Pod | " + s.sidecarTraffic + " Gbps |");
+  }
+  lines.push("| Privileged | `" + s.privileged + "` |");
+  lines.push("| Sensor Debug | `" + s.debug + "` |");
+  lines.push("");
+  lines.push("## 2. CloudLens Connection");
+  lines.push("");
+  lines.push("| Setting | Value |");
+  lines.push("|---|---|");
+  lines.push("| Helm Release Name | `" + s.releaseName + "` |");
+  lines.push("| Namespace | `" + s.namespace + "` |");
+  lines.push("| Chart Package | `" + s.chartPath + "` |");
+  lines.push("| Image | `" + s.imageRepo + ":" + s.imageTag + "` |");
+  lines.push("| CLMS Server | `" + s.sensorServer + "` |");
+  lines.push("| Project Key | `" + s.projectKey + "` |");
+  if (s.customTags) lines.push("| Custom Tags | `" + s.customTags + "` |");
+  lines.push("");
+  lines.push("## 3. Sizing Decision");
+  lines.push("");
+  if (hasDaemonset) {
+    lines.push("### Per-Node DaemonSet Footprint");
+    lines.push("");
+    lines.push("| Metric | Value |");
+    lines.push("|---|---|");
+    lines.push("| CPU Request | **" + s.rCpuReq + "** (" + s.rPctCpu + " of node) |");
+    lines.push("| CPU Limit | " + s.rCpuLim + " |");
+    lines.push("| Memory Request | **" + s.rMemReq + "** (" + s.rPctMem + " of node) |");
+    lines.push("| Memory Limit | " + s.rMemLim + " |");
+    lines.push("");
+  }
+  lines.push("### Cluster-Wide Totals");
+  lines.push("");
+  lines.push("| Metric | Value |");
+  lines.push("|---|---|");
+  lines.push("| Total Sensor CPU Request | **" + s.cCpuReq + "** |");
+  lines.push("| Total Sensor CPU Limit | " + s.cCpuLim + " |");
+  lines.push("| Total Sensor Memory Request | **" + s.cMemReq + "** |");
+  lines.push("| Total Sensor Memory Limit | " + s.cMemLim + " |");
+  lines.push("| Total Mirrored Traffic | " + s.cTraffic + " |");
+  lines.push("| Cluster Raw Resources | " + s.cClusterTotal + " |");
+  lines.push("");
+  lines.push("### Verdict");
+  lines.push("");
+  lines.push("> **" + s.verdictTitle + "**");
+  lines.push(">");
+  lines.push("> " + s.verdictText);
+  lines.push("");
+
+  if (hasDaemonset) {
+    lines.push("## 4. Helm Install Command");
+    lines.push("");
+    lines.push("```bash");
+    lines.push(s.helmOutput);
+    lines.push("```");
+    lines.push("");
+    lines.push("## 5. values.yaml (alternative to inline flags)");
+    lines.push("");
+    lines.push("Apply with: `helm install " + s.releaseName + " " + s.chartPath + " -n " + s.namespace + " -f values.yaml`");
+    lines.push("");
+    lines.push("```yaml");
+    lines.push(s.valuesOutput);
+    lines.push("```");
+    lines.push("");
+  }
+
+  if (hasSidecar) {
+    lines.push("## " + (hasDaemonset ? "6" : "4") + ". Sidecar Container Injection");
+    lines.push("");
+    lines.push("Paste the `cloudlens` container block into your application Deployment/StatefulSet pod spec. CloudLens uses manual sidecar injection (no separate Helm chart).");
+    lines.push("");
+    lines.push("```yaml");
+    lines.push(s.sidecarOutput);
+    lines.push("```");
+    lines.push("");
+
+    if (isOpenShift) {
+      lines.push("### OpenShift SecurityContextConstraints");
+      lines.push("");
+      lines.push("Sidecar mode on OpenShift requires an SCC granting `SYS_RAWIO`, `SYS_ADMIN`, `NET_ADMIN` capabilities. Apply with: `oc apply -f cloudlens-scc.yaml`, then bind to your workload's ServiceAccount: `oc adm policy add-scc-to-user cloudlens-vtap -z <sa> -n <ns>`.");
+      lines.push("");
+      lines.push("```yaml");
+      lines.push(sccYaml());
+      lines.push("```");
+      lines.push("");
+    }
+  }
+
+  lines.push("## " + (hasDaemonset && hasSidecar ? (isOpenShift ? "8" : "7") : (hasSidecar && isOpenShift ? "6" : (hasSidecar ? "5" : "6"))) + ". Deployment Checklist");
+  lines.push("");
+  lines.push("### Prerequisites");
+  lines.push("- [ ] Authenticated to cluster (`oc login` or `kubectl config use-context`)");
+  lines.push("- [ ] Helm 3.x installed (`helm version`)");
+  lines.push("- [ ] Chart package `" + s.chartPath + "` available on local filesystem");
+  lines.push("- [ ] Image `" + s.imageRepo + ":" + s.imageTag + "` pullable from cluster nodes");
+  lines.push("- [ ] Network path from cluster to CLMS server `" + s.sensorServer + "` (TCP/443 or configured port)");
+  lines.push("- [ ] Project key obtained from CLMS portal and documented securely");
+  lines.push("");
+  if (hasDaemonset) {
+    lines.push("### DaemonSet Deployment");
+    lines.push("- [ ] Create target namespace: `kubectl create namespace " + s.namespace + "` (or let Helm create it)");
+    if (isOpenShift) lines.push("- [ ] Grant privileged SCC: `oc adm policy add-scc-to-user privileged -z default -n " + s.namespace + "`");
+    lines.push("- [ ] Execute Helm install command (see §4)");
+    lines.push("- [ ] Verify DaemonSet rollout: `kubectl -n " + s.namespace + " rollout status ds/" + s.releaseName + "`");
+    lines.push("- [ ] Confirm 1 pod per node: `kubectl -n " + s.namespace + " get pods -o wide | wc -l` vs `kubectl get nodes | wc -l`");
+    lines.push("- [ ] Check sensor logs for CLMS handshake: `kubectl -n " + s.namespace + " logs ds/" + s.releaseName + " | grep -i connect`");
+    lines.push("");
+  }
+  if (hasSidecar) {
+    lines.push("### Sidecar Deployment");
+    if (isOpenShift) lines.push("- [ ] Apply SCC: `oc apply -f cloudlens-scc.yaml`");
+    if (isOpenShift) lines.push("- [ ] Bind SCC to workload SA: `oc adm policy add-scc-to-user cloudlens-vtap -z <sa> -n <ns>`");
+    lines.push("- [ ] Inject `cloudlens` container into target Deployment(s) per §" + (hasDaemonset ? "6" : "4"));
+    lines.push("- [ ] Rolling restart affected workloads: `kubectl rollout restart deployment/<app> -n <ns>`");
+    lines.push("- [ ] Verify sidecar running: `kubectl -n <ns> describe pod <pod> | grep cloudlens`");
+    lines.push("- [ ] Check sidecar logs: `kubectl -n <ns> logs <pod> -c cloudlens`");
+    lines.push("");
+  }
+  lines.push("### Post-Deployment Validation");
+  lines.push("- [ ] Verify sensor health in CLMS portal (sensor appears online)");
+  lines.push("- [ ] Confirm mirrored traffic reaching CLMS (expected ≈ " + s.cTraffic + ")");
+  lines.push("- [ ] Verify no pod evictions on worker nodes: `kubectl get events -A | grep -i evict`");
+  lines.push("- [ ] Monitor cluster headroom for 24h before declaring production-ready");
+  lines.push("- [ ] Document rollback procedure: `helm uninstall " + s.releaseName + " -n " + s.namespace + "`");
+  lines.push("");
+  lines.push("## Rollback");
+  lines.push("");
+  lines.push("```bash");
+  if (hasDaemonset) lines.push("helm uninstall " + s.releaseName + " -n " + s.namespace);
+  if (hasSidecar) {
+    lines.push("# Sidecar: revert workload Deployment to pre-injection version");
+    lines.push("kubectl rollout undo deployment/<app> -n <ns>");
+    if (isOpenShift) lines.push("oc adm policy remove-scc-from-user cloudlens-vtap -z <sa> -n <ns>");
+  }
+  lines.push("```");
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+  lines.push("*Questions? Contact Keysight Solutions Engineering.*");
+  lines.push("");
+
+  return lines.join("\n");
+}
+
+function getReportFilename() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  const stamp = now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + "-" + pad(now.getHours()) + pad(now.getMinutes());
+  const platform = $("platform").value;
+  const mode = $("mode").value;
+  return "cloudlens-deployment-plan-" + platform + "-" + mode + "-" + stamp + ".md";
+}
+
+/* ===================== WIRING ===================== */
+wireCopy("copyHelm", "helmOutput");
+wireCopy("copyValues", "valuesOutput");
+wireCopy("copySidecar", "sidecarOutput");
+
+$("downloadHelm").addEventListener("click", function () {
+  download("cloudlens-install.sh", "#!/usr/bin/env bash\nset -euo pipefail\n\n" + $("helmOutput").textContent + "\n", "text/x-shellscript");
+});
+$("downloadValues").addEventListener("click", function () {
+  download("values.yaml", $("valuesOutput").textContent + "\n", "text/yaml");
+});
+$("downloadSidecar").addEventListener("click", function () {
+  download("cloudlens-sidecar.yaml", $("sidecarOutput").textContent + "\n", "text/yaml");
+});
+$("downloadScc").addEventListener("click", function () {
+  download("cloudlens-scc.yaml", sccYaml() + "\n", "text/yaml");
+});
+
+$("downloadReport").addEventListener("click", function () {
+  download(getReportFilename(), generateMarkdownReport(), "text/markdown");
+});
+$("printReport").addEventListener("click", function () { window.print(); });
+$("copyReport").addEventListener("click", function () {
+  navigator.clipboard.writeText(generateMarkdownReport()).then(() => {
+    const btn = $("copyReport");
+    const orig = btn.textContent;
+    btn.textContent = "\u2713 Copied Full Report!";
+    btn.classList.add("success");
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove("success"); }, 2000);
+  });
+});
+
+$("loadExampleBtn").addEventListener("click", function () { applyPreset(AIRTEL_EXAMPLE); });
+$("resetBtn").addEventListener("click", function () { applyPreset(DEFAULTS); });
+
+/* Auto-select crio when OpenShift is chosen */
+$("platform").addEventListener("change", function () {
+  if ($("platform").value === "openshift") $("containerRuntime").value = "crio";
+  else if ($("containerRuntime").value === "crio") $("containerRuntime").value = "containerd";
+  calculate();
+});
+
+document.querySelectorAll("input, select").forEach(el => {
+  el.addEventListener("input", calculate);
+  el.addEventListener("change", calculate);
+});
+
+calculate();
+</script>
+</body>
+</html>
