@@ -21,9 +21,9 @@ Keysight CloudLens sensor resource planning calculators for production deploymen
 
 ### VM Sensor Calculator
 - **Install command** — RPM / DEB / MSI / tarball based on OS
-- **sensor.conf** — configuration file with CLMS connection
+- **sensor.conf** — configuration file with vController connection
 - **Ansible playbook** — fleet-scale deployment automation
-- **Pre-flight script** — validates kernel headers, mirror interface, CLMS reachability, disk space, SELinux
+- **Pre-flight script** — validates kernel headers, mirror interface, vController reachability, disk space, SELinux
 - **Full Markdown report** — scenario + all artifacts + deployment checklist
 
 ### sVM (VMware) Calculator

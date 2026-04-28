@@ -464,7 +464,7 @@
       </div>
       <div class="field">
         <label>Chart Package <span class="hint">.tgz file path</span></label>
-        <input type="text" id="chartPath" class="mono" value="./cloudlens-sensor-6.13.1-408.tgz">
+        <input type="text" id="chartPath" class="mono" value="./cloudlens-sensor-6.14.0-1.tgz">
       </div>
       <div class="field">
         <label>Image Repository</label>
@@ -472,14 +472,14 @@
       </div>
       <div class="field">
         <label>Image Tag</label>
-        <input type="text" id="imageTag" class="mono" value="6.13.1-372">
+        <input type="text" id="imageTag" class="mono" value="6.14.0-1">
       </div>
       <div class="field">
-        <label>Sensor Manager Host / IP <span class="hint">CLMS endpoint</span></label>
-        <input type="text" id="sensorServer" class="mono" value="clms.example.com">
+        <label>vController Host / IP <span class="hint">vController endpoint</span></label>
+        <input type="text" id="sensorServer" class="mono" value="vcontroller.example.com">
       </div>
       <div class="field">
-        <label>Project Key <span class="hint">From CLMS portal</span></label>
+        <label>Project Key <span class="hint">From vController UI</span></label>
         <input type="text" id="projectKey" class="mono" value="&lt;PROJECT_KEY&gt;">
       </div>
       <div class="field">
@@ -619,9 +619,9 @@ const DEFAULTS = {
   nodeCpu: 16, nodeMem: 64, mode: "daemonset", nodeTraffic: "2", sidecarPods: 50,
   sidecarTraffic: "0.3", privileged: "true", debug: "false",
   releaseName: "cloudlens-agent", namespace: "cloudlens",
-  chartPath: "./cloudlens-sensor-6.13.1-408.tgz",
-  imageRepo: "<your-registry>/cloudlens/sensor", imageTag: "6.13.1-372",
-  sensorServer: "clms.example.com", projectKey: "<PROJECT_KEY>", customTags: ""
+  chartPath: "./cloudlens-sensor-6.14.0-1.tgz",
+  imageRepo: "<your-registry>/cloudlens/sensor", imageTag: "6.14.0-1",
+  sensorServer: "vcontroller.example.com", projectKey: "<PROJECT_KEY>", customTags: ""
 };
 const EXAMPLE_PRESET = {
   platform: "openshift", containerRuntime: "crio", nodeCount: 150, podsPerNode: 200,
@@ -691,7 +691,7 @@ function calculate() {
   const chartPath = $("chartPath").value.trim() || "./cloudlens-sensor.tgz";
   const imageRepo = $("imageRepo").value.trim() || "<your-registry>/cloudlens/sensor";
   const imageTag = $("imageTag").value.trim() || "latest";
-  const sensorServer = $("sensorServer").value.trim() || "clms.example.com";
+  const sensorServer = $("sensorServer").value.trim() || "vcontroller.example.com";
   const projectKey = $("projectKey").value.trim() || "<PROJECT_KEY>";
   const customTags = $("customTags").value.trim();
 
@@ -1063,7 +1063,7 @@ function generateMarkdownReport() {
   lines.push("| Namespace | `" + s.namespace + "` |");
   lines.push("| Chart Package | `" + s.chartPath + "` |");
   lines.push("| Image | `" + s.imageRepo + ":" + s.imageTag + "` |");
-  lines.push("| CLMS Server | `" + s.sensorServer + "` |");
+  lines.push("| vController | `" + s.sensorServer + "` |");
   lines.push("| Project Key | `" + s.projectKey + "` |");
   if (s.customTags) lines.push("| Custom Tags | `" + s.customTags + "` |");
   lines.push("");
@@ -1144,8 +1144,8 @@ function generateMarkdownReport() {
   lines.push("- [ ] Helm 3.x installed (`helm version`)");
   lines.push("- [ ] Chart package `" + s.chartPath + "` available on local filesystem");
   lines.push("- [ ] Image `" + s.imageRepo + ":" + s.imageTag + "` pullable from cluster nodes");
-  lines.push("- [ ] Network path from cluster to CLMS server `" + s.sensorServer + "` (TCP/443 or configured port)");
-  lines.push("- [ ] Project key obtained from CLMS portal and documented securely");
+  lines.push("- [ ] Network path from cluster to vController `" + s.sensorServer + "` (TCP/443 or configured port)");
+  lines.push("- [ ] Project key obtained from vController UI and documented securely");
   lines.push("");
   if (hasDaemonset) {
     lines.push("### DaemonSet Deployment");
@@ -1154,7 +1154,7 @@ function generateMarkdownReport() {
     lines.push("- [ ] Execute Helm install command (see §4)");
     lines.push("- [ ] Verify DaemonSet rollout: `kubectl -n " + s.namespace + " rollout status ds/" + s.releaseName + "`");
     lines.push("- [ ] Confirm 1 pod per node: `kubectl -n " + s.namespace + " get pods -o wide | wc -l` vs `kubectl get nodes | wc -l`");
-    lines.push("- [ ] Check sensor logs for CLMS handshake: `kubectl -n " + s.namespace + " logs ds/" + s.releaseName + " | grep -i connect`");
+    lines.push("- [ ] Check sensor logs for vController handshake: `kubectl -n " + s.namespace + " logs ds/" + s.releaseName + " | grep -i connect`");
     lines.push("");
   }
   if (hasSidecar) {
@@ -1168,8 +1168,8 @@ function generateMarkdownReport() {
     lines.push("");
   }
   lines.push("### Post-Deployment Validation");
-  lines.push("- [ ] Verify sensor health in CLMS portal (sensor appears online)");
-  lines.push("- [ ] Confirm mirrored traffic reaching CLMS (expected ≈ " + s.cTraffic + ")");
+  lines.push("- [ ] Verify sensor health in vController UI (sensor appears online)");
+  lines.push("- [ ] Confirm mirrored traffic reaching vController (expected ≈ " + s.cTraffic + ")");
   lines.push("- [ ] Verify no pod evictions on worker nodes: `kubectl get events -A | grep -i evict`");
   lines.push("- [ ] Monitor cluster headroom for 24h before declaring production-ready");
   lines.push("- [ ] Document rollback procedure: `helm uninstall " + s.releaseName + " -n " + s.namespace + "`");

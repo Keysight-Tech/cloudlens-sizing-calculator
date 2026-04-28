@@ -327,14 +327,14 @@
       <h2>CloudLens Connection <span class="badge">CONFIG</span></h2>
       <div class="field">
         <label>Sensor Version / Package</label>
-        <input type="text" id="sensorVersion" class="mono" value="6.13.1-372">
+        <input type="text" id="sensorVersion" class="mono" value="6.14.0-1">
       </div>
       <div class="field">
-        <label>Sensor Manager Host / IP <span class="hint">CLMS endpoint</span></label>
-        <input type="text" id="sensorServer" class="mono" value="clms.example.com">
+        <label>vController Host / IP <span class="hint">vController endpoint</span></label>
+        <input type="text" id="sensorServer" class="mono" value="vcontroller.example.com">
       </div>
       <div class="field">
-        <label>Project Key <span class="hint">From CLMS portal</span></label>
+        <label>Project Key <span class="hint">From vController UI</span></label>
         <input type="text" id="projectKey" class="mono" value="&lt;PROJECT_KEY&gt;">
       </div>
       <div class="field">
@@ -509,7 +509,7 @@ const DEFAULTS = {
   vmCount: 50, vmVcpu: 8, vmMem: 32,
   vmTraffic: "0.75", mirrorMethod: "promiscvnic", installMethod: "package",
   kernelHeaders: "preinstalled", debug: "false",
-  sensorVersion: "6.13.1-372", sensorServer: "clms.example.com",
+  sensorVersion: "6.14.0-1", sensorServer: "vcontroller.example.com",
   projectKey: "<PROJECT_KEY>", mirrorIface: "eth1",
   repoUrl: "https://downloads.keysight.com/cloudlens/", customTags: "",
   serviceName: "cloudlens-sensor"
@@ -598,8 +598,8 @@ function calculate() {
   const installMethod = $("installMethod").value;
   const kernelHeaders = $("kernelHeaders").value;
   const debug = $("debug").value;
-  const sensorVersion = $("sensorVersion").value.trim() || "6.13.1-372";
-  const sensorServer = $("sensorServer").value.trim() || "clms.example.com";
+  const sensorVersion = $("sensorVersion").value.trim() || "6.14.0-1";
+  const sensorServer = $("sensorServer").value.trim() || "vcontroller.example.com";
   const projectKey = $("projectKey").value.trim() || "<PROJECT_KEY>";
   const mirrorIface = $("mirrorIface").value.trim() || "eth1";
   const repoUrl = $("repoUrl").value.trim() || "https://downloads.keysight.com/cloudlens/";
@@ -806,7 +806,7 @@ function generateConfig(ctx) {
     "# /etc/cloudlens/sensor.conf",
     "# CloudLens VM Sensor configuration",
     "",
-    "# CLMS (manager) connection",
+    "# vController connection",
     "server=" + ctx.sensorServer,
     "project_key=" + ctx.projectKey,
     "",
@@ -960,7 +960,7 @@ function generatePreflight(ctx) {
     "  fail \"Interface " + ctx.mirrorIface + " not found. Available: $(ip -br link show | awk '{print $1}' | tr '\\n' ' ')\"",
     "fi",
     "",
-    "echo \"\"; echo \"=== 4. CLMS connectivity ===\"",
+    "echo \"\"; echo \"=== 4. vController connectivity ===\"",
     "if command -v nc >/dev/null 2>&1; then",
     "  nc -zw3 " + ctx.sensorServer + " 443 && pass \"TCP 443 to " + ctx.sensorServer + " OK\" || fail \"Cannot reach " + ctx.sensorServer + ":443\"",
     "else",
@@ -1047,7 +1047,7 @@ function generateMarkdownReport() {
   L.push("## 2. CloudLens Connection"); L.push("");
   L.push("| Setting | Value |"); L.push("|---|---|");
   L.push("| Sensor Version | `" + ctx.sensorVersion + "` |");
-  L.push("| CLMS Server | `" + ctx.sensorServer + "` |");
+  L.push("| vController | `" + ctx.sensorServer + "` |");
   L.push("| Project Key | `" + ctx.projectKey + "` |");
   L.push("| Mirror Interface | `" + ctx.mirrorIface + "` |");
   L.push("| Systemd Service | `" + ctx.serviceName + "` |");
@@ -1083,19 +1083,19 @@ function generateMarkdownReport() {
   L.push("## 8. Deployment Checklist"); L.push("");
   L.push("### Prerequisites");
   L.push("- [ ] Sensor package available at `" + $("repoUrl").value + pkgFilename({osFamily: $("osFamily").value, sensorVersion: ctx.sensorVersion}) + "`");
-  L.push("- [ ] Network path from VMs to CLMS server `" + ctx.sensorServer + "` (TCP/443)");
-  L.push("- [ ] Project key obtained from CLMS portal and stored securely");
+  L.push("- [ ] Network path from VMs to vController `" + ctx.sensorServer + "` (TCP/443)");
+  L.push("- [ ] Project key obtained from vController UI and stored securely");
   L.push("- [ ] Mirror method pre-configured on hypervisor (if using port-mirror/ERSPAN)");
   L.push("- [ ] Ansible control node has SSH access to all target VMs (if using Ansible)"); L.push("");
   L.push("### Deployment Steps");
   L.push("- [ ] Run pre-flight script on 1 pilot VM; fix any failures");
-  L.push("- [ ] Install sensor on pilot VM; verify CLMS handshake in portal");
+  L.push("- [ ] Install sensor on pilot VM; verify vController handshake in portal");
   L.push("- [ ] Verify mirrored traffic flowing: `journalctl -u " + ctx.serviceName + " -f`");
   L.push("- [ ] Deploy to 10-20 VM canary batch; monitor 24h");
   L.push("- [ ] Roll out to remaining fleet via Ansible"); L.push("");
   L.push("### Post-Deployment Validation");
-  L.push("- [ ] All " + ctx.cVmCount + " appear online in CLMS portal");
-  L.push("- [ ] Total traffic on CLMS matches expected " + ctx.cTraffic);
+  L.push("- [ ] All " + ctx.cVmCount + " appear online in vController UI");
+  L.push("- [ ] Total traffic on vController matches expected " + ctx.cTraffic);
   L.push("- [ ] No VMs showing elevated CPU/memory pressure");
   L.push("- [ ] Document rollback: `systemctl disable --now " + ctx.serviceName + "` + uninstall package"); L.push("");
   L.push("## 9. Rollback"); L.push("");
