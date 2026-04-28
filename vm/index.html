@@ -197,6 +197,19 @@
     .results-card { background: #1A1A1A !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     table th { background: var(--red) !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
+  /* Toast for Save/Load/Share feedback */
+  #cfgToast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #1A1A1A; color: #fff; padding: 12px 20px; border-radius: 8px;
+    font-size: 14px; font-weight: 500; box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    border-left: 4px solid var(--red); opacity: 0; pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease; z-index: 9999;
+    max-width: 90vw;
+  }
+  #cfgToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #cfgToast.error { border-left-color: #FF4444; }
+  #cfgToast.success { border-left-color: #00C853; }
+  @media print { #cfgToast { display: none !important; } }
 </style>
 </head>
 <body>
@@ -217,7 +230,11 @@
     </div>
     <div class="actions">
       <button class="example-btn" id="loadExampleBtn" type="button">Load Example</button>
+      <button class="example-btn" id="saveCfgBtn" type="button" title="Download current scenario as JSON">📥 Save</button>
+      <button class="example-btn" id="loadCfgBtn" type="button" title="Load a previously saved scenario JSON">📤 Load</button>
+      <button class="example-btn" id="shareCfgBtn" type="button" title="Copy a shareable URL with the scenario encoded">🔗 Share</button>
       <button class="example-btn" id="resetBtn" type="button">Reset to Defaults</button>
+      <input type="file" id="cfgFileInput" accept=".json,application/json" style="display:none">
       <div class="brand">KEYSIGHT</div>
     </div>
   </header>
@@ -1160,7 +1177,139 @@ document.querySelectorAll("input, select").forEach(el => {
 });
 
 populateOsVersions();
+
+/* ===================== SAVE / LOAD / SHARE ===================== */
+const CALC_ID = "vm";
+const CFG_SCHEMA_VERSION = 1;
+const CFG_FIELD_IDS = [
+  "hypervisor","osFamily","osVersion","vmCount","vmVcpu","vmMem",
+  "vmTraffic","mirrorMethod","installMethod","kernelHeaders","debug",
+  "sensorVersion","sensorServer","projectKey","mirrorIface","repoUrl",
+  "customTags","serviceName"
+];
+
+function serializeConfig() {
+  const data = {};
+  CFG_FIELD_IDS.forEach(id => { const el = $(id); if (el) data[id] = el.value; });
+  return data;
+}
+
+function applyConfig(data) {
+  if (!data || typeof data !== "object") throw new Error("Empty configuration");
+  /* osFamily must be set BEFORE osVersion options are populated */
+  if (Object.prototype.hasOwnProperty.call(data, "osFamily")) {
+    $("osFamily").value = data.osFamily;
+    populateOsVersions();
+  }
+  CFG_FIELD_IDS.forEach(id => {
+    if (id === "osFamily") return;
+    if (Object.prototype.hasOwnProperty.call(data, id)) {
+      const el = $(id);
+      if (el) el.value = data[id];
+    }
+  });
+  calculate();
+}
+
+function buildEnvelope() {
+  return {
+    v: CFG_SCHEMA_VERSION,
+    calc: CALC_ID,
+    ts: new Date().toISOString(),
+    data: serializeConfig()
+  };
+}
+
+function showToast(msg, kind) {
+  let t = document.getElementById("cfgToast");
+  if (!t) { t = document.createElement("div"); t.id = "cfgToast"; document.body.appendChild(t); }
+  t.className = ""; t.textContent = msg;
+  if (kind) t.classList.add(kind);
+  requestAnimationFrame(() => t.classList.add("show"));
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => t.classList.remove("show"), 2800);
+}
+
+function sanitizeFilename(s) {
+  return (s || "").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "config";
+}
+
+function saveConfigToFile() {
+  try {
+    const env = buildEnvelope();
+    const stem = sanitizeFilename($("serviceName").value) || "cloudlens-" + CALC_ID;
+    const today = new Date().toISOString().slice(0, 10);
+    const filename = stem + ".cloudlens-" + CALC_ID + "-" + today + ".json";
+    const blob = new Blob([JSON.stringify(env, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    showToast("Saved as " + filename, "success");
+  } catch (e) { showToast("Save failed: " + e.message, "error"); }
+}
+
+function loadConfigFromFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const env = JSON.parse(reader.result);
+      if (!env || env.calc !== CALC_ID) throw new Error("This file is for the " + (env && env.calc ? env.calc.toUpperCase() : "unknown") + " calculator");
+      applyConfig(env.data);
+      showToast("Configuration loaded from " + file.name, "success");
+    } catch (e) { showToast("Load failed: " + e.message, "error"); }
+  };
+  reader.onerror = () => showToast("Could not read file", "error");
+  reader.readAsText(file);
+}
+
+function b64urlEncode(str) {
+  return btoa(unescape(encodeURIComponent(str))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function b64urlDecode(str) {
+  str = str.replace(/-/g, "+").replace(/_/g, "/");
+  while (str.length % 4) str += "=";
+  return decodeURIComponent(escape(atob(str)));
+}
+
+function shareConfigByURL() {
+  try {
+    const env = buildEnvelope();
+    const cfg = b64urlEncode(JSON.stringify(env));
+    const url = location.origin + location.pathname + "?cfg=" + cfg;
+    if (url.length > 8000) { showToast("Link is unusually long (" + url.length + " chars) — some email clients may truncate", "error"); }
+    history.replaceState(null, "", "?cfg=" + cfg);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(
+        () => showToast("Shareable link copied to clipboard", "success"),
+        () => showToast("Link in address bar — copy manually", "success")
+      );
+    } else { showToast("Link in address bar — copy manually", "success"); }
+  } catch (e) { showToast("Share failed: " + e.message, "error"); }
+}
+
+function bootstrapFromURL() {
+  const cfg = new URLSearchParams(location.search).get("cfg");
+  if (!cfg) return;
+  try {
+    const env = JSON.parse(b64urlDecode(cfg));
+    if (!env || env.calc !== CALC_ID) throw new Error("Wrong calculator: link is for " + (env && env.calc ? env.calc.toUpperCase() : "unknown"));
+    applyConfig(env.data);
+    setTimeout(() => showToast("Configuration loaded from link", "success"), 200);
+  } catch (e) { setTimeout(() => showToast("Could not parse share link: " + e.message, "error"), 200); }
+}
+
+$("saveCfgBtn").addEventListener("click", saveConfigToFile);
+$("loadCfgBtn").addEventListener("click", () => $("cfgFileInput").click());
+$("cfgFileInput").addEventListener("change", (e) => {
+  const f = e.target.files && e.target.files[0];
+  if (f) loadConfigFromFile(f);
+  e.target.value = "";
+});
+$("shareCfgBtn").addEventListener("click", shareConfigByURL);
+
 calculate();
+bootstrapFromURL();
 </script>
 </body>
 </html>
