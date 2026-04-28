@@ -557,6 +557,29 @@
         <label>Custom Tags <span class="hint">Optional, comma-separated k=v</span></label>
         <input type="text" id="customTags" class="mono" placeholder="app=kube,env=prod">
       </div>
+      <div class="field">
+        <label>Packet Type <span class="hint">vController Connection Properties · what data the sensor sends</span></label>
+        <select id="packetType">
+          <option value="raw" selected>Raw — full packet capture (encrypted bytes for TLS)</option>
+          <option value="netflow">NetFlow — flow records only (v9 / IPFIX metadata)</option>
+          <option value="ssl_payload">SSL Payload — decrypted application data via OpenSSL hook</option>
+        </select>
+      </div>
+      <div class="field" id="vpbHostField" style="display:none;">
+        <label>vPB Destination <span class="hint">Virtual Packet Broker that decapsulates GREoUDP</span></label>
+        <input type="text" id="vpbHost" class="mono" value="vpb.example.com">
+      </div>
+      <div class="field" id="dtlsField" style="display:none;">
+        <label>Encrypted GREoUDP (DTLS v1.2) <span class="hint">Encrypts the egress tunnel between sensor and vPB</span></label>
+        <select id="dtlsEncrypted">
+          <option value="false" selected>No (plaintext GREoUDP)</option>
+          <option value="true">Yes (DTLS v1.2)</option>
+        </select>
+      </div>
+      <div class="field" id="netflowCollectorField" style="display:none;">
+        <label>NetFlow Collector <span class="hint">host:port (default port 2055)</span></label>
+        <input type="text" id="netflowCollector" class="mono" value="netflow.example.com:2055">
+      </div>
     </div>
   </div>
 
@@ -789,6 +812,22 @@ function validate() {
   if (sensorServer === "vcontroller.example.com")
     warnings.push("vController Host is still the example hostname — replace with your vController address.");
 
+  /* Packet Type validation */
+  const packetType = $("packetType") ? $("packetType").value : "raw";
+  const dtlsEncrypted = $("dtlsEncrypted") ? ($("dtlsEncrypted").value === "true") : false;
+  const vpbHost = $("vpbHost") ? $("vpbHost").value.trim() : "";
+  const netflowCollector = $("netflowCollector") ? $("netflowCollector").value.trim() : "";
+  if (packetType === "ssl_payload") {
+    if (!vpbHost || vpbHost === "vpb.example.com")
+      warnings.push("SSL Payload mode requires a Virtual Packet Broker (vPB) destination — replace the example vPB host with the customer's vPB address.");
+    if (!dtlsEncrypted)
+      warnings.push("SSL Payload egress is unencrypted (plaintext GREoUDP). Enable DTLS for production deployments — sensitive payloads will travel unencrypted between the sensor and the vPB.");
+  }
+  if (packetType === "netflow") {
+    if (!netflowCollector || netflowCollector === "netflow.example.com:2055")
+      warnings.push("NetFlow mode requires a collector address (host:port) — replace the example with your NetFlow collector.");
+  }
+
   return { errors: errors, warnings: warnings };
 }
 
@@ -839,6 +878,10 @@ function calculate() {
   const sensorServer = $("sensorServer").value.trim() || "vcontroller.example.com";
   const projectKey = $("projectKey").value.trim() || "<PROJECT_KEY>";
   const customTags = $("customTags").value.trim();
+  const packetType = $("packetType") ? $("packetType").value : "raw";
+  const dtlsEncrypted = $("dtlsEncrypted") ? ($("dtlsEncrypted").value === "true") : false;
+  const vpbHost = $("vpbHost") ? $("vpbHost").value.trim() : "";
+  const netflowCollector = $("netflowCollector") ? $("netflowCollector").value.trim() : "";
 
   /* ---- Toggle visibility ---- */
   const showNodeTraffic = (mode === "daemonset" || mode === "hybrid");
@@ -847,10 +890,25 @@ function calculate() {
   $("sidecarPodsField").style.display = showSidecar ? "block" : "none";
   $("sidecarTrafficField").style.display = showSidecar ? "block" : "none";
 
+  /* Show/hide packet-type sub-fields */
+  if ($("vpbHostField")) $("vpbHostField").style.display = (packetType === "ssl_payload") ? "block" : "none";
+  if ($("dtlsField")) $("dtlsField").style.display = (packetType === "ssl_payload") ? "block" : "none";
+  if ($("netflowCollectorField")) $("netflowCollectorField").style.display = (packetType === "netflow") ? "block" : "none";
+
   $("helmSection").style.display = (mode === "daemonset" || mode === "hybrid") ? "block" : "none";
   $("valuesSection").style.display = (mode === "daemonset" || mode === "hybrid") ? "block" : "none";
   $("sidecarSection").style.display = (mode === "sidecar" || mode === "hybrid") ? "block" : "none";
   $("openshiftSccInfo").style.display = (showSidecar && platform === "openshift") ? "block" : "none";
+
+  /* ---- Packet-type multipliers (estimated; verify with Keysight PS) ---- */
+  const PACKET_TYPE_MULT = {
+    raw:                    { cpu: 1.00, mem: 1.00 },
+    netflow:                { cpu: 0.65, mem: 0.90 },
+    ssl_payload:            { cpu: 1.75, mem: 1.20 },
+    ssl_payload_dtls:       { cpu: 2.10, mem: 1.25 }
+  };
+  const ptKey = (packetType === "ssl_payload" && dtlsEncrypted) ? "ssl_payload_dtls" : packetType;
+  const ptMult = PACKET_TYPE_MULT[ptKey] || PACKET_TYPE_MULT.raw;
 
   /* ---- Compute resources ---- */
   const overhead = PLATFORM_OVERHEAD[platform];
@@ -859,10 +917,10 @@ function calculate() {
 
   let cpuReq = 0, cpuLim = 0, memReq = 0, memLim = 0;
   if (mode === "daemonset" || mode === "hybrid") {
-    cpuReq = dsTier.cpuReq * overhead;
-    cpuLim = dsTier.cpuLim * overhead;
-    memReq = dsTier.memReq * overhead;
-    memLim = dsTier.memLim * overhead;
+    cpuReq = dsTier.cpuReq * overhead * ptMult.cpu;
+    cpuLim = dsTier.cpuLim * overhead * ptMult.cpu;
+    memReq = dsTier.memReq * overhead * ptMult.mem;
+    memLim = dsTier.memLim * overhead * ptMult.mem;
   }
 
   setText("r_cpu_req", fmtCpu(cpuReq));
@@ -879,10 +937,10 @@ function calculate() {
 
   let scCpuReq = 0, scCpuLim = 0, scMemReq = 0, scMemLim = 0;
   if (showSidecar) {
-    scCpuReq = scTier.cpuReq * overhead;
-    scCpuLim = scTier.cpuLim * overhead;
-    scMemReq = scTier.memReq * overhead;
-    scMemLim = scTier.memLim * overhead;
+    scCpuReq = scTier.cpuReq * overhead * ptMult.cpu;
+    scCpuLim = scTier.cpuLim * overhead * ptMult.cpu;
+    scMemReq = scTier.memReq * overhead * ptMult.mem;
+    scMemLim = scTier.memLim * overhead * ptMult.mem;
     totalCpuReq += scCpuReq * sidecarPods;
     totalCpuLim += scCpuLim * sidecarPods;
     totalMemReq += scMemReq * sidecarPods;
@@ -1414,7 +1472,8 @@ const CFG_FIELD_IDS = [
   "platform","containerRuntime","nodeCount","podsPerNode","nodeCpu","nodeMem",
   "mode","nodeTraffic","sidecarPods","sidecarTraffic","privileged","debug",
   "releaseName","namespace","chartPath","imageRepo","imageTag",
-  "sensorServer","projectKey","customTags"
+  "sensorServer","projectKey","customTags",
+  "packetType","dtlsEncrypted","vpbHost","netflowCollector"
 ];
 
 function serializeConfig() {
@@ -1771,6 +1830,10 @@ function renderDiagram() {
   const privileged = $("privileged").value;
   const sensorServer = $("sensorServer").value || "vcontroller.example.com";
   const releaseName = $("releaseName").value || "cloudlens-agent";
+  const packetType = $("packetType") ? $("packetType").value : "raw";
+  const dtlsEncrypted = $("dtlsEncrypted") ? ($("dtlsEncrypted").value === "true") : false;
+  const vpbHost = $("vpbHost") ? $("vpbHost").value || "vpb.example.com" : "vpb.example.com";
+  const netflowCollector = $("netflowCollector") ? $("netflowCollector").value || "netflow.example.com:2055" : "netflow.example.com:2055";
 
   const W = 1000;
   const cgX = 60, cgY = 60, cgW = W - 120;
@@ -1828,34 +1891,104 @@ function renderDiagram() {
     parts.push(dgPrivilegedBadge(privileged, nextBadgeX, cgY + 14));
     nextBadgeX += 106;
   }
+  /* Packet-type badge — only shown when not Raw (default) */
+  if (packetType === "ssl_payload") {
+    const lbl = dtlsEncrypted ? "Packet Type: SSL Payload (DTLS)" : "Packet Type: SSL Payload";
+    const w = lbl.length * 6.6 + 24;
+    parts.push('<g><rect x="' + nextBadgeX + '" y="' + (cgY + 14) + '" width="' + w + '" height="22" rx="11" fill="#0066CC"/>' +
+      dgText({x: nextBadgeX + 12, y: cgY + 25, text: lbl, fill: DG_COLOR.textOnDark, size: 10, weight: 600}) + '</g>');
+    nextBadgeX += w + 8;
+  } else if (packetType === "netflow") {
+    const lbl = "Packet Type: NetFlow";
+    const w = lbl.length * 6.6 + 24;
+    parts.push('<g><rect x="' + nextBadgeX + '" y="' + (cgY + 14) + '" width="' + w + '" height="22" rx="11" fill="#7A1ED9"/>' +
+      dgText({x: nextBadgeX + 12, y: cgY + 25, text: lbl, fill: DG_COLOR.textOnDark, size: 10, weight: 600}) + '</g>');
+    nextBadgeX += w + 8;
+  }
 
   /* Insert cluster body */
   parts.push(dsBody);
   parts.push(scBody);
 
-  /* Gold mirror arrow → vController, stroke-width scales with traffic */
-  const vcY = cgY + cgH + 56;
-  parts.push(dgBezierArrow({x1: W/2, y1: cgY + cgH, x2: W/2, y2: vcY, color: DG_COLOR.gold, glow: true,
-    strokeWidth: arrowWidth,
-    label: "Mirrored: " + totalTrafficLabel + " Gbps aggregate"}));
+  /* === Bottom topology — reshapes per packet type === */
+  const isSslPayload = packetType === "ssl_payload";
+  const isNetflow = packetType === "netflow";
+  const centerW = 320, centerH = 64;
+  const centerX = W/2 - centerW/2;
+  const centerY = cgY + cgH + 56;
 
-  /* vController box */
-  const vcW = 300, vcH = 64, vcX = W/2 - vcW/2;
-  parts.push(dgRect({x: vcX, y: vcY, w: vcW, h: vcH, gradient: true, shadow: true}));
-  parts.push(dgText({x: W/2, y: vcY + 24, text: "vController", weight: 600, size: 13, fill: DG_COLOR.textOnDark, anchor: "middle"}));
-  parts.push(dgText({x: W/2, y: vcY + 44, text: sensorServer, weight: 400, size: 10, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  /* Gold mirror arrow → center node. Label + dasharray reshape per packet type */
+  let arrowLabel, arrowDash;
+  if (isSslPayload && dtlsEncrypted) {
+    arrowLabel = "DTLS-GREoUDP: " + totalTrafficLabel + " Gbps (encrypted)";
+    arrowDash = "6 4";
+  } else if (isSslPayload) {
+    arrowLabel = "GREoUDP: " + totalTrafficLabel + " Gbps (plaintext)";
+    arrowDash = null;
+  } else if (isNetflow) {
+    arrowLabel = "NetFlow records · ~" + totalTrafficLabel + " Gbps observed";
+    arrowDash = "2 3";
+  } else {
+    arrowLabel = "Mirrored: " + totalTrafficLabel + " Gbps aggregate";
+    arrowDash = null;
+  }
+  parts.push(dgBezierArrow({x1: W/2, y1: cgY + cgH, x2: W/2, y2: centerY, color: DG_COLOR.gold, glow: true,
+    strokeWidth: arrowWidth, dasharray: arrowDash, label: arrowLabel}));
 
-  /* Plain arrow → Tools */
-  const toolsY = vcY + vcH + 44;
-  parts.push(dgBezierArrow({x1: W/2, y1: vcY + vcH, x2: W/2, y2: toolsY, color: DG_COLOR.customer, label: "Sensor data"}));
+  /* Center node — vController OR vPB OR NetFlow Collector */
+  parts.push(dgRect({x: centerX, y: centerY, w: centerW, h: centerH, gradient: !isNetflow, fill: isNetflow ? DG_COLOR.customer : null, shadow: true}));
+  if (isSslPayload) {
+    parts.push(dgText({x: W/2, y: centerY + 22, text: "vPB (Virtual Packet Broker)", weight: 600, size: 13, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+    parts.push(dgText({x: W/2, y: centerY + 42, text: vpbHost + " · decapsulates GREoUDP", weight: 400, size: 10, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  } else if (isNetflow) {
+    parts.push(dgText({x: W/2, y: centerY + 22, text: "NetFlow Collector", weight: 600, size: 13, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+    parts.push(dgText({x: W/2, y: centerY + 42, text: netflowCollector + " · v9 / IPFIX", weight: 400, size: 10, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  } else {
+    parts.push(dgText({x: W/2, y: centerY + 24, text: "vController", weight: 600, size: 13, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+    parts.push(dgText({x: W/2, y: centerY + 44, text: sensorServer, weight: 400, size: 10, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  }
 
-  /* Tools box */
-  const tlW = 220, tlH = 54, tlX = W/2 - tlW/2;
-  parts.push(dgRect({x: tlX, y: toolsY, w: tlW, h: tlH, fill: DG_COLOR.customer, shadow: true}));
-  parts.push(dgText({x: W/2, y: toolsY + 27, text: "Network Tools", weight: 600, size: 12, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  /* Side annotation: vController as registration-only (when bypassed by SSL Payload / NetFlow) */
+  let toolsY;
+  if (isNetflow) {
+    /* NetFlow: collector IS the terminal — no separate Tools box */
+    toolsY = centerY + centerH + 0;  /* collector itself terminates */
+    /* Side annotation for vController */
+    const annoX = centerX + centerW + 24;
+    const annoW = 220, annoH = 56;
+    if (annoX + annoW < W) {
+      parts.push(dgRect({x: annoX, y: centerY + 4, w: annoW, h: annoH, fill: "#F5F5F5", stroke: DG_COLOR.containerBorder, strokeWidth: 1}));
+      parts.push(dgText({x: annoX + 12, y: centerY + 22, text: "vController", weight: 600, size: 11, fill: DG_COLOR.textOnLight}));
+      parts.push(dgText({x: annoX + 12, y: centerY + 40, text: "registration / management only", weight: 400, size: 9, fill: DG_COLOR.textMuted}));
+      parts.push('<line x1="' + (centerX + centerW) + '" y1="' + (centerY + centerH/2) + '" x2="' + annoX + '" y2="' + (centerY + centerH/2) + '" stroke="' + DG_COLOR.textMuted + '" stroke-width="1" stroke-dasharray="2 3"/>');
+    }
+    toolsY = centerY + centerH + 90; /* skip — no terminal tools box */
+  } else if (isSslPayload) {
+    toolsY = centerY + centerH + 44;
+    /* Side annotation for vController */
+    const annoX = centerX + centerW + 24;
+    const annoW = 220, annoH = 56;
+    if (annoX + annoW < W) {
+      parts.push(dgRect({x: annoX, y: centerY + 4, w: annoW, h: annoH, fill: "#F5F5F5", stroke: DG_COLOR.containerBorder, strokeWidth: 1}));
+      parts.push(dgText({x: annoX + 12, y: centerY + 22, text: "vController", weight: 600, size: 11, fill: DG_COLOR.textOnLight}));
+      parts.push(dgText({x: annoX + 12, y: centerY + 40, text: "registration / management only", weight: 400, size: 9, fill: DG_COLOR.textMuted}));
+      parts.push('<line x1="' + (centerX + centerW) + '" y1="' + (centerY + centerH/2) + '" x2="' + annoX + '" y2="' + (centerY + centerH/2) + '" stroke="' + DG_COLOR.textMuted + '" stroke-width="1" stroke-dasharray="2 3"/>');
+    }
+  } else {
+    toolsY = centerY + centerH + 44;
+  }
 
-  /* Total height = tools bottom + footer pad */
-  const H = toolsY + tlH + 56;
+  /* Plain arrow → Tools (only for raw + ssl_payload — netflow terminates at collector) */
+  if (!isNetflow) {
+    parts.push(dgBezierArrow({x1: W/2, y1: centerY + centerH, x2: W/2, y2: toolsY, color: DG_COLOR.customer,
+      label: isSslPayload ? "Decapsulated payload" : "Sensor data"}));
+    const tlW = 220, tlH = 54, tlX = W/2 - tlW/2;
+    parts.push(dgRect({x: tlX, y: toolsY, w: tlW, h: tlH, fill: DG_COLOR.customer, shadow: true}));
+    parts.push(dgText({x: W/2, y: toolsY + 27, text: "Network Tools", weight: 600, size: 12, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  }
+
+  /* Total height = bottom + footer pad */
+  const H = isNetflow ? (centerY + centerH + 80) : (toolsY + 54 + 56);
 
   parts.push(dgFooterStrip({width: W, height: H}));
 
