@@ -210,6 +210,17 @@
   #cfgToast.error { border-left-color: #FF4444; }
   #cfgToast.success { border-left-color: #00C853; }
   @media print { #cfgToast { display: none !important; } }
+  /* Validation banner */
+  #validationBanner { display: none; margin: 0 0 24px 0; border-radius: 8px; padding: 16px 20px; font-size: 15px; line-height: 1.5; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  #validationBanner.show { display: block; }
+  #validationBanner.error   { background: #FFF5F5; border-left: 4px solid #E53935; color: #4A1010; }
+  #validationBanner.warning { background: #FFFBEB; border-left: 4px solid #F59E0B; color: #4A2D00; }
+  #validationBanner h3 { margin: 0 0 8px 0; font-size: 15px; font-weight: 700; }
+  #validationBanner ul { margin: 0; padding-left: 22px; }
+  #validationBanner li { margin: 2px 0; }
+  #validationBanner.error h3   { color: #B71C1C; }
+  #validationBanner.warning h3 { color: #92400E; }
+  @media print { #validationBanner { display: none !important; } }
 </style>
 </head>
 <body>
@@ -238,6 +249,8 @@
       <div class="brand">KEYSIGHT</div>
     </div>
   </header>
+
+  <div id="validationBanner" role="alert" aria-live="polite"></div>
 
   <div class="grid-3">
     <div class="card">
@@ -575,6 +588,67 @@ function applyPreset(p) {
   populateOsVersions();
   calculate();
 }
+
+/* ===================== VALIDATION ===================== */
+function validate() {
+  const errors = [], warnings = [];
+  const vmCount = parseInt($("vmCount").value);
+  const vmVcpu = parseInt($("vmVcpu").value);
+  const vmTraffic = parseFloat($("vmTraffic").value);
+  const sensorVersion = $("sensorVersion").value.trim();
+  const sensorServer = $("sensorServer").value.trim();
+  const projectKey = $("projectKey").value.trim();
+  const mirrorIface = $("mirrorIface").value.trim();
+  const repoUrl = $("repoUrl").value.trim();
+  const customTags = $("customTags").value.trim();
+  const serviceName = $("serviceName").value.trim();
+
+  if (!Number.isFinite(vmCount) || vmCount < 1)
+    errors.push("VM count must be at least 1.");
+  if (!Number.isFinite(vmTraffic) || vmTraffic <= 0)
+    errors.push("Per-VM traffic must be greater than 0.");
+  if (!sensorServer) errors.push("vController Host / IP cannot be empty.");
+  if (!sensorVersion) errors.push("Sensor version cannot be empty.");
+  if (!serviceName) errors.push("systemd service name cannot be empty.");
+  if (!mirrorIface) errors.push("Mirror interface cannot be empty.");
+
+  if (Number.isFinite(vmVcpu) && vmVcpu < 2)
+    warnings.push("VM vCPU is below 2 — sensors require at least 1 dedicated CPU plus headroom.");
+  if (projectKey.indexOf("<PROJECT_KEY>") !== -1 || !projectKey)
+    warnings.push("Project Key still uses the placeholder — replace with the actual key from vController UI.");
+  if (sensorServer === "vcontroller.example.com")
+    warnings.push("vController Host is still the example hostname — replace with the customer's vController address.");
+  if (repoUrl && !/^https?:\/\//.test(repoUrl))
+    warnings.push("Sensor repo URL does not start with http(s):// — install scripts may fail.");
+  if (customTags && !/^[A-Za-z0-9_-]+=[^,]+(,[A-Za-z0-9_-]+=[^,]+)*$/.test(customTags))
+    warnings.push("Custom tags should be comma-separated `key=value` pairs (e.g. `env=prod,tier=db`).");
+
+  return { errors: errors, warnings: warnings };
+}
+
+function renderValidation(v) {
+  const el = $("validationBanner");
+  if (!el) return;
+  while (el.firstChild) el.removeChild(el.firstChild);
+  if (v.errors.length === 0 && v.warnings.length === 0) { el.className = ""; return; }
+  const isError = v.errors.length > 0;
+  const items = isError ? v.errors : v.warnings;
+  const icon = isError ? "🚨" : "⚠️";
+  const heading = isError
+    ? "Fix " + v.errors.length + " issue" + (v.errors.length === 1 ? "" : "s") + " — outputs may be incomplete or incorrect"
+    : v.warnings.length + " warning" + (v.warnings.length === 1 ? "" : "s") + " — review before sharing with customer";
+  el.className = "show " + (isError ? "error" : "warning");
+  const h3 = document.createElement("h3");
+  h3.textContent = icon + " " + heading;
+  const ul = document.createElement("ul");
+  items.forEach(msg => {
+    const li = document.createElement("li");
+    li.textContent = msg;
+    ul.appendChild(li);
+  });
+  el.appendChild(h3);
+  el.appendChild(ul);
+}
 function populateOsVersions() {
   const fam = $("osFamily").value;
   const list = OS_VERSIONS[fam] || [];
@@ -685,6 +759,8 @@ function calculate() {
   generateConfig(ctx);
   generateAnsible(ctx);
   generatePreflight(ctx);
+
+  renderValidation(validate());
 }
 
 function generateInstall(ctx) {

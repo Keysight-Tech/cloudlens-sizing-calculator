@@ -252,6 +252,17 @@
   #cfgToast.error { border-left-color: #FF4444; }
   #cfgToast.success { border-left-color: #00C853; }
   @media print { #cfgToast { display: none !important; } }
+  /* Validation banner */
+  #validationBanner { display: none; margin: 0 0 24px 0; border-radius: 8px; padding: 16px 20px; font-size: 15px; line-height: 1.5; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  #validationBanner.show { display: block; }
+  #validationBanner.error   { background: #FFF5F5; border-left: 4px solid #E53935; color: #4A1010; }
+  #validationBanner.warning { background: #FFFBEB; border-left: 4px solid #F59E0B; color: #4A2D00; }
+  #validationBanner h3 { margin: 0 0 8px 0; font-size: 15px; font-weight: 700; }
+  #validationBanner ul { margin: 0; padding-left: 22px; }
+  #validationBanner li { margin: 2px 0; }
+  #validationBanner.error h3   { color: #B71C1C; }
+  #validationBanner.warning h3 { color: #92400E; }
+  @media print { #validationBanner { display: none !important; } }
 </style>
 </head>
 <body>
@@ -280,6 +291,8 @@
       <div class="brand">KEYSIGHT</div>
     </div>
   </header>
+
+  <div id="validationBanner" role="alert" aria-live="polite"></div>
 
   <div class="disclaimer-banner">
     <strong>⚠ Estimated sizing.</strong>
@@ -777,6 +790,70 @@ function calculate() {
   highlightActiveTiers();
   generateBom();
   generateCsv();
+
+  renderValidation(validate());
+}
+
+/* ===================== VALIDATION ===================== */
+function validate() {
+  const errors = [], warnings = [];
+  const customerName = $("customerName").value.trim();
+  const kvoVcpu = parseInt($("kvoVcpu").value);
+  const kvoRam = parseInt($("kvoRam").value);
+  const kvoDisk = parseInt($("kvoDisk").value);
+
+  if (!Array.isArray(sites) || sites.length === 0) {
+    errors.push("At least one site is required — use 'Add Site' to create one.");
+  } else {
+    sites.forEach((s, i) => {
+      const lbl = s.name && s.name.trim() ? s.name.trim() : "Site " + (i + 1);
+      if (!Number.isFinite(s.esxiHosts) || s.esxiHosts < 1)
+        errors.push(lbl + ": ESXi host count must be at least 1.");
+      if (!Number.isFinite(s.throughput) || s.throughput <= 0)
+        errors.push(lbl + ": Throughput must be greater than 0 Gbps.");
+      if (!s.name || !s.name.trim())
+        warnings.push("Site " + (i + 1) + " has no name — defaults will be used in artifacts.");
+      if (Number.isFinite(s.monitoredVms) && s.monitoredVms < 0)
+        errors.push(lbl + ": Monitored VM count cannot be negative.");
+      if (!Number.isFinite(s.clmVcpu) || s.clmVcpu < 2)
+        warnings.push(lbl + ": CLM vCPU is below 2 — vController appliance requires minimum 4 vCPU per Keysight docs.");
+    });
+  }
+
+  if (!Number.isFinite(kvoVcpu) || kvoVcpu < 4)
+    warnings.push("KVO vCPU is below 4 — Keysight Vision Orchestrator requires 4 vCPU minimum.");
+  if (!Number.isFinite(kvoRam) || kvoRam < 8)
+    warnings.push("KVO RAM is below 8 GB — KVO requires 8 GB minimum.");
+  if (!Number.isFinite(kvoDisk) || kvoDisk < 100)
+    warnings.push("KVO disk is below 100 GB — KVO requires 100 GB minimum.");
+  if (!customerName)
+    warnings.push("Customer name is empty — generated artifacts will use the placeholder 'Customer'.");
+
+  return { errors: errors, warnings: warnings };
+}
+
+function renderValidation(v) {
+  const el = $("validationBanner");
+  if (!el) return;
+  while (el.firstChild) el.removeChild(el.firstChild);
+  if (v.errors.length === 0 && v.warnings.length === 0) { el.className = ""; return; }
+  const isError = v.errors.length > 0;
+  const items = isError ? v.errors : v.warnings;
+  const icon = isError ? "🚨" : "⚠️";
+  const heading = isError
+    ? "Fix " + v.errors.length + " issue" + (v.errors.length === 1 ? "" : "s") + " — outputs may be incomplete or incorrect"
+    : v.warnings.length + " warning" + (v.warnings.length === 1 ? "" : "s") + " — review before sharing with customer";
+  el.className = "show " + (isError ? "error" : "warning");
+  const h3 = document.createElement("h3");
+  h3.textContent = icon + " " + heading;
+  const ul = document.createElement("ul");
+  items.forEach(msg => {
+    const li = document.createElement("li");
+    li.textContent = msg;
+    ul.appendChild(li);
+  });
+  el.appendChild(h3);
+  el.appendChild(ul);
 }
 
 /* ========== ARTIFACT GENERATION ========== */

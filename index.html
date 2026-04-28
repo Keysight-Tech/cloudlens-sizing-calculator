@@ -342,6 +342,17 @@
   #cfgToast.error { border-left-color: #FF4444; }
   #cfgToast.success { border-left-color: #00C853; }
   @media print { #cfgToast { display: none !important; } }
+  /* Validation banner */
+  #validationBanner { display: none; margin: 0 0 24px 0; border-radius: 8px; padding: 16px 20px; font-size: 15px; line-height: 1.5; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  #validationBanner.show { display: block; }
+  #validationBanner.error   { background: #FFF5F5; border-left: 4px solid #E53935; color: #4A1010; }
+  #validationBanner.warning { background: #FFFBEB; border-left: 4px solid #F59E0B; color: #4A2D00; }
+  #validationBanner h3 { margin: 0 0 8px 0; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  #validationBanner ul { margin: 0; padding-left: 22px; }
+  #validationBanner li { margin: 2px 0; }
+  #validationBanner.error h3   { color: #B71C1C; }
+  #validationBanner.warning h3 { color: #92400E; }
+  @media print { #validationBanner { display: none !important; } }
 </style>
 </head>
 <body>
@@ -370,6 +381,8 @@
       <div class="brand">KEYSIGHT</div>
     </div>
   </header>
+
+  <div id="validationBanner" role="alert" aria-live="polite"></div>
 
   <div class="grid-3">
     <div class="card">
@@ -690,6 +703,69 @@ function applyPreset(preset) {
   calculate();
 }
 
+/* ===================== VALIDATION ===================== */
+function validate() {
+  const errors = [], warnings = [];
+  const nodeCount = parseInt($("nodeCount").value);
+  const nodeCpu = parseFloat($("nodeCpu").value);
+  const nodeTraffic = parseFloat($("nodeTraffic").value);
+  const sidecarPods = parseInt($("sidecarPods").value);
+  const sidecarTraffic = parseFloat($("sidecarTraffic").value);
+  const mode = $("mode").value;
+  const imageRepo = $("imageRepo").value.trim();
+  const projectKey = $("projectKey").value.trim();
+  const sensorServer = $("sensorServer").value.trim();
+  const releaseName = $("releaseName").value.trim();
+
+  if (!Number.isFinite(nodeCount) || nodeCount < 1)
+    errors.push("Node count must be at least 1.");
+  if ((mode === "daemonset" || mode === "hybrid") && (!Number.isFinite(nodeTraffic) || nodeTraffic <= 0))
+    errors.push("Per-node traffic must be greater than 0 for " + (mode === "hybrid" ? "Hybrid" : "DaemonSet") + " mode.");
+  if ((mode === "sidecar" || mode === "hybrid") && (!Number.isFinite(sidecarPods) || sidecarPods < 1))
+    errors.push("Sidecar pod count must be at least 1 for " + (mode === "hybrid" ? "Hybrid" : "Sidecar") + " mode.");
+  if ((mode === "sidecar" || mode === "hybrid") && (!Number.isFinite(sidecarTraffic) || sidecarTraffic <= 0))
+    errors.push("Per-sidecar traffic must be greater than 0 for " + (mode === "hybrid" ? "Hybrid" : "Sidecar") + " mode.");
+  if (!sensorServer) errors.push("vController Host / IP cannot be empty.");
+  if (!releaseName) errors.push("Helm release name cannot be empty.");
+
+  if (Number.isFinite(nodeCpu) && nodeCpu < 4)
+    warnings.push("Node CPU is below 4 — small clusters may not meet minimum sensor footprint requirements.");
+  if (imageRepo.indexOf("<your-registry>") !== -1 || !imageRepo)
+    warnings.push("Image Repository still uses the placeholder `<your-registry>` — update before deploying.");
+  if (projectKey.indexOf("<PROJECT_KEY>") !== -1 || !projectKey)
+    warnings.push("Project Key still uses the placeholder — replace with the actual key from vController UI.");
+  if (sensorServer === "vcontroller.example.com")
+    warnings.push("vController Host is still the example hostname — replace with the customer's vController address.");
+
+  return { errors: errors, warnings: warnings };
+}
+
+function renderValidation(v) {
+  const el = $("validationBanner");
+  if (!el) return;
+  while (el.firstChild) el.removeChild(el.firstChild);
+  if (v.errors.length === 0 && v.warnings.length === 0) {
+    el.className = ""; return;
+  }
+  const isError = v.errors.length > 0;
+  const items = isError ? v.errors : v.warnings;
+  const icon = isError ? "🚨" : "⚠️";
+  const heading = isError
+    ? "Fix " + v.errors.length + " issue" + (v.errors.length === 1 ? "" : "s") + " — outputs may be incomplete or incorrect"
+    : v.warnings.length + " warning" + (v.warnings.length === 1 ? "" : "s") + " — review before sharing with customer";
+  el.className = "show " + (isError ? "error" : "warning");
+  const h3 = document.createElement("h3");
+  h3.textContent = icon + " " + heading;
+  const ul = document.createElement("ul");
+  items.forEach(msg => {
+    const li = document.createElement("li");
+    li.textContent = msg;
+    ul.appendChild(li);
+  });
+  el.appendChild(h3);
+  el.appendChild(ul);
+}
+
 /* ===================== MAIN CALC ===================== */
 function calculate() {
   const platform = $("platform").value;
@@ -822,6 +898,8 @@ function calculate() {
       scCpuReq, scCpuLim, scMemReq, scMemLim, isOpenShift: (platform === "openshift")
     });
   }
+
+  renderValidation(validate());
 }
 
 /* ===================== ARTIFACT GENERATION ===================== */
