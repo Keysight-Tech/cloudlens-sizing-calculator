@@ -1365,10 +1365,132 @@ function dgFooterStrip(o) {
 function dgSvg(o) {
   return '<svg xmlns="http://www.w3.org/2000/svg" width="' + o.width + '" height="' + o.height + '" viewBox="0 0 ' + o.width + ' ' + o.height + '" font-family="' + DG_FONT + '">' + dgDefs() + o.body + '</svg>';
 }
+function dgRenderSite(site, x, y, w, h, idx) {
+  const parts = [];
+  const pad = 14;
+  parts.push('<g data-role="site-subgraph">');
+  parts.push(dgRect({x, y, w, h, fill: DG_COLOR.containerFill, stroke: DG_COLOR.containerBorder, strokeWidth: 1, rx: 12}));
+  parts.push(dgRect({x, y, w, h, fill: "url(#dgDots)", rx: 12}));
+  const siteName = (site.name && site.name.trim()) || ("Site " + (idx + 1));
+  const chipLabel = siteName + " · " + (site.esxiHosts || 0) + " hosts · " + (site.throughput || 0) + " Gbps";
+  parts.push(dgSubgraphChip({x: x + pad, y: y + pad, label: chipLabel, color: DG_COLOR.customer}));
+
+  /* 3 sample ESXi hosts inside the site */
+  const sampleCount = Math.min(3, Math.max(site.esxiHosts || 1, 1));
+  const hostW = 70, hostH = 50, hostGap = 10;
+  const hostBlockW = sampleCount * hostW + (sampleCount - 1) * hostGap;
+  const hostStartX = x + (w - hostBlockW) / 2;
+  const hostY = y + 50;
+  for (let i = 0; i < sampleCount; i++) {
+    const hx = hostStartX + i * (hostW + hostGap);
+    parts.push(dgRect({x: hx, y: hostY, w: hostW, h: hostH, fill: DG_COLOR.customer, shadow: false, rx: 8}));
+    parts.push(dgText({x: hx + hostW/2, y: hostY + hostH/2, text: "ESXi", weight: 600, size: 10, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  }
+  if ((site.esxiHosts || 0) > sampleCount) {
+    parts.push(dgText({x: hostStartX + hostBlockW + 6, y: hostY + hostH/2, text: "+" + ((site.esxiHosts) - sampleCount), weight: 600, size: 10, fill: DG_COLOR.textMuted, anchor: "start"}));
+  }
+
+  /* sVM band below hosts */
+  const svmY = hostY + hostH + 12;
+  parts.push(dgRect({x: x + pad, y: svmY, w: w - 2 * pad, h: 36, gradient: true, shadow: true}));
+  parts.push(dgText({x: x + w/2, y: svmY + 18, text: (site.esxiHosts || 0) + " sVMs (1 per host)", weight: 600, size: 11, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+
+  /* CLM box */
+  const clmY = svmY + 36 + 14;
+  if (site.clmPlacement === "shared") {
+    parts.push(dgText({x: x + w/2, y: clmY + 10, text: "(shared CLM, see suite-level)", weight: 400, size: 10, fill: DG_COLOR.textMuted, anchor: "middle"}));
+  } else {
+    parts.push(dgRect({x: x + pad, y: clmY, w: w - 2 * pad, h: 32, gradient: true, shadow: true}));
+    parts.push(dgText({x: x + w/2, y: clmY + 16, text: "CLM", weight: 600, size: 11, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  }
+
+  parts.push("</g>");
+  return parts.join("");
+}
+
 function renderDiagram() {
-  return dgSvg({width: 900, height: 540, body:
-    '<text x="450" y="270" text-anchor="middle" font-family="' + DG_FONT + '" font-size="16" fill="#999">Diagram coming in Phase 3</text>'
-  });
+  if (typeof sites === "undefined" || !Array.isArray(sites)) {
+    return dgSvg({width: 900, height: 200, body: '<text x="450" y="100" text-anchor="middle" font-family="' + DG_FONT + '" font-size="14" fill="#999">No sites configured</text>'});
+  }
+  const customerName = ($("customerName").value || "Customer").trim();
+  const siteCount = sites.length;
+  const allShared = sites.length > 0 && sites.every(s => s.clmPlacement === "shared");
+
+  /* Layout: up to 3 sites per row */
+  const sitesPerRow = Math.min(3, Math.max(siteCount, 1));
+  const siteW = 280, siteH = 200, siteGapX = 24, siteGapY = 24;
+  const rows = Math.ceil(siteCount / sitesPerRow);
+  const sitesGridW = sitesPerRow * siteW + (sitesPerRow - 1) * siteGapX;
+  const sitesGridH = rows * siteH + (rows - 1) * siteGapY;
+
+  const W = Math.max(1000, sitesGridW + 120);
+  const H = 60 + sitesGridH + 60 + (allShared ? 70 : 0) + 60 + 64 + 60 + 54 + 60;
+
+  const parts = [];
+  parts.push(dgHeaderStrip({width: W, title: "CloudLens Visibility Topology · VMware sVM", customer: customerName}));
+
+  /* Sites grid */
+  const gridStartX = (W - sitesGridW) / 2;
+  const gridStartY = 56;
+  let cyMax = gridStartY;
+  for (let i = 0; i < siteCount; i++) {
+    const row = Math.floor(i / sitesPerRow);
+    const col = i % sitesPerRow;
+    const sx = gridStartX + col * (siteW + siteGapX);
+    const sy = gridStartY + row * (siteH + siteGapY);
+    parts.push(dgRenderSite(sites[i], sx, sy, siteW, siteH, i));
+    cyMax = Math.max(cyMax, sy + siteH);
+  }
+
+  /* Optional shared-CLM box (when all sites use shared CLM) */
+  let convergenceY = cyMax + 60;
+  if (allShared && siteCount > 0) {
+    const sclmW = 300, sclmH = 56, sclmX = W/2 - sclmW/2, sclmY = cyMax + 40;
+    parts.push('<g data-role="clm-shared">' + dgRect({x: sclmX, y: sclmY, w: sclmW, h: sclmH, gradient: true, shadow: true}) +
+      dgText({x: W/2, y: sclmY + 22, text: "Shared CLM", weight: 600, size: 13, fill: DG_COLOR.textOnDark, anchor: "middle"}) +
+      dgText({x: W/2, y: sclmY + 40, text: "single appliance · serves all sites", weight: 400, size: 10, fill: DG_COLOR.textOnDark, anchor: "middle"}) +
+      '</g>');
+    /* Arrows from each site bottom → shared CLM top */
+    for (let i = 0; i < siteCount; i++) {
+      const row = Math.floor(i / sitesPerRow);
+      const col = i % sitesPerRow;
+      const sx = gridStartX + col * (siteW + siteGapX);
+      const sy = gridStartY + row * (siteH + siteGapY);
+      parts.push(dgBezierArrow({x1: sx + siteW/2, y1: sy + siteH, x2: W/2, y2: sclmY, color: DG_COLOR.customer}));
+    }
+    convergenceY = sclmY + sclmH + 50;
+    /* Arrow shared-CLM → KVO */
+    parts.push(dgBezierArrow({x1: W/2, y1: sclmY + sclmH, x2: W/2, y2: convergenceY, color: DG_COLOR.customer}));
+  } else {
+    /* Arrows from each per-site CLM directly → KVO */
+    for (let i = 0; i < siteCount; i++) {
+      const row = Math.floor(i / sitesPerRow);
+      const col = i % sitesPerRow;
+      const sx = gridStartX + col * (siteW + siteGapX);
+      const sy = gridStartY + row * (siteH + siteGapY);
+      parts.push(dgBezierArrow({x1: sx + siteW/2, y1: sy + siteH, x2: W/2, y2: convergenceY, color: DG_COLOR.customer}));
+    }
+  }
+
+  /* KVO box (centralized) */
+  const kvoW = 320, kvoH = 64, kvoX = W/2 - kvoW/2;
+  parts.push(dgRect({x: kvoX, y: convergenceY, w: kvoW, h: kvoH, gradient: true, shadow: true}));
+  parts.push(dgText({x: W/2, y: convergenceY + 24, text: "KVO", weight: 600, size: 14, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  parts.push(dgText({x: W/2, y: convergenceY + 44, text: "Keysight Vision Orchestrator · centralized", weight: 400, size: 10, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+
+  /* Gold value-flow arrow KVO → Tools */
+  const toolsY = convergenceY + kvoH + 50;
+  const totalGbps = sites.reduce((s, x) => s + (parseFloat(x.throughput) || 0), 0).toFixed(1);
+  parts.push(dgBezierArrow({x1: W/2, y1: convergenceY + kvoH, x2: W/2, y2: toolsY, color: DG_COLOR.gold, glow: true,
+    label: "Mirrored: " + totalGbps + " Gbps aggregate"}));
+
+  const tlW = 220, tlH = 54, tlX = W/2 - tlW/2;
+  parts.push(dgRect({x: tlX, y: toolsY, w: tlW, h: tlH, fill: DG_COLOR.customer, shadow: true}));
+  parts.push(dgText({x: W/2, y: toolsY + 27, text: "Network Tools", weight: 600, size: 12, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+
+  parts.push(dgFooterStrip({width: W, height: H}));
+
+  return dgSvg({width: W, height: H, body: parts.join("")});
 }
 function refreshDiagramUi() {
   const host = $("diagramHost");
