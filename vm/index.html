@@ -1514,13 +1514,60 @@ function dgSvg(o) {
 function dgHypervisorLabel(h) {
   return ({esxi:"VMware ESXi",kvm:"KVM",hyperv:"Hyper-V",ahv:"Nutanix AHV",xen:"Xen",baremetal:"Bare-metal",cloud:"Cloud VM"}[h] || h);
 }
-
 function dgMirrorLabel(m) {
   return ({promiscvnic:"Promiscuous vNIC",portmirror:"Port-mirror",span:"SPAN/TAP",erspan:"ERSPAN tunnel"}[m] || m);
 }
-
 function dgOsLabel(family) {
   return ({rhel:"RHEL/CentOS",ubuntu:"Ubuntu/Debian",sles:"SLES",windows:"Windows Server",amazon:"Amazon Linux"}[family] || family);
+}
+
+/* === Reactive layout helpers (Level 1 — scale-aware count) ============= */
+function dgScaledLayout(actual) {
+  const a = Math.max(1, actual | 0);
+  if (a <= 3)  return { shown: a, rows: 1, perRow: a, more: 0 };
+  if (a <= 6)  return { shown: a, rows: 2, perRow: Math.ceil(a / 2), more: 0 };
+  if (a <= 12) return { shown: 6, rows: 2, perRow: 3, more: a - 6 };
+  return         { shown: 3, rows: 1, perRow: 3, more: a - 3 };
+}
+
+/* === Resource-proportional helpers (Level 3) =========================== */
+function dgScaleNodeWidth(vcpu) {
+  if (!vcpu || vcpu <= 2) return 180;
+  if (vcpu <= 16) return 180 + (vcpu - 2) * 1.5;
+  if (vcpu <= 64) return 200 + (vcpu - 16) * 0.625;
+  return 240;
+}
+function dgScaleArrowWidth(traffic) {
+  const t = Math.max(0, traffic);
+  if (t < 1)   return 1.8;
+  if (t < 10)  return 2.4;
+  if (t < 50)  return 3.0;
+  if (t < 200) return 3.6;
+  if (t < 500) return 4.2;
+  return 5.0;
+}
+
+/* === Conditional shape badges (Level 2) ================================ */
+function dgWindowsBadge(osFamily, x, y) {
+  if (osFamily !== "windows") return "";
+  return '<g><rect x="' + x + '" y="' + y + '" width="116" height="22" rx="11" fill="#0078D4"/>' +
+    dgText({x: x + 11, y: y + 11, text: "Windows MSI install", fill: DG_COLOR.textOnDark, size: 10, weight: 600}) + '</g>';
+}
+function dgErspanBadge(mirrorMethod, x, y) {
+  if (mirrorMethod !== "erspan") return "";
+  return '<g><rect x="' + x + '" y="' + y + '" width="120" height="22" rx="11" fill="#7A1ED9"/>' +
+    dgText({x: x + 11, y: y + 11, text: "Tunnel encapsulated", fill: DG_COLOR.textOnDark, size: 10, weight: 600}) + '</g>';
+}
+
+function dgRenderVm(nx, ny, nodeW, nodeH, osFamily) {
+  const parts = [];
+  parts.push(dgRect({x: nx, y: ny, w: nodeW, h: nodeH, fill: DG_COLOR.customer, shadow: true}));
+  parts.push(dgText({x: nx + nodeW/2, y: ny + 22, text: "VM", weight: 600, size: 12, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  parts.push(dgText({x: nx + nodeW/2, y: ny + 40, text: dgOsLabel(osFamily), weight: 400, size: 11, fill: "#B5B5B5", anchor: "middle"}));
+  parts.push(dgRect({x: nx + 24, y: ny + 60, w: nodeW - 48, h: 60, gradient: true, shadow: true}));
+  parts.push(dgText({x: nx + nodeW/2, y: ny + 80, text: "CloudLens", weight: 600, size: 11, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  parts.push(dgText({x: nx + nodeW/2, y: ny + 102, text: "Sensor agent", weight: 400, size: 9, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  return parts.join("");
 }
 
 function renderDiagram() {
@@ -1532,45 +1579,67 @@ function renderDiagram() {
   const mirrorMethod = $("mirrorMethod").value;
   const sensorServer = $("sensorServer").value || "vcontroller.example.com";
   const serviceName = $("serviceName").value || "cloudlens-sensor";
-  const totalTraffic = (vmCount * vmTraffic).toFixed(1);
+  const totalTraffic = vmCount * vmTraffic;
+  const totalTrafficLabel = totalTraffic.toFixed(1);
   const isErspan = mirrorMethod === "erspan";
 
-  const W = 1000, H = 590;
+  const W = 1000;
+  const cgX = 60, cgY = 60, cgW = W - 120;
+  const layout = dgScaledLayout(vmCount);
+  const nodeW = dgScaleNodeWidth(vmVcpu);
+  const arrowWidth = dgScaleArrowWidth(totalTraffic);
+  const nodeH = 130, nodeGap = 18, rowGap = 16;
+
   const parts = [];
   parts.push(dgHeaderStrip({width: W, title: "CloudLens Visibility Topology · VM Sensor", customer: serviceName}));
 
-  /* Fleet subgraph */
-  const cgX = 60, cgY = 56, cgW = W - 120, cgH = 230;
+  /* Fleet subgraph (height grows with row count) */
+  const cgInnerTop = cgY + 50;
+  const fleetGridH = layout.rows * nodeH + (layout.rows - 1) * rowGap;
+  const cgH = 50 + fleetGridH + 28;
   parts.push(dgRect({x: cgX, y: cgY, w: cgW, h: cgH, fill: DG_COLOR.containerFill, stroke: DG_COLOR.containerBorder, strokeWidth: 1, rx: 14}));
   parts.push(dgRect({x: cgX, y: cgY, w: cgW, h: cgH, fill: "url(#dgDots)", rx: 14}));
+
   const chipLabel = dgHypervisorLabel(hypervisor) + " · " + vmCount + " VMs · " + dgOsLabel(osFamily);
   parts.push(dgSubgraphChip({x: cgX + 14, y: cgY + 14, label: chipLabel, color: DG_COLOR.customer}));
 
-  /* 3 sample VMs */
-  const sampleCount = Math.min(3, vmCount);
-  const nodeW = 200, nodeH = 130, nodeGap = 24;
-  const blockW = sampleCount * nodeW + (sampleCount - 1) * nodeGap;
-  const startX = cgX + (cgW - blockW) / 2;
-  const nodeY = cgY + 70;
-  for (let i = 0; i < sampleCount; i++) {
-    const nx = startX + i * (nodeW + nodeGap);
-    parts.push(dgRect({x: nx, y: nodeY, w: nodeW, h: nodeH, fill: DG_COLOR.customer, shadow: true}));
-    parts.push(dgText({x: nx + nodeW/2, y: nodeY + 22, text: "VM", weight: 600, size: 12, fill: DG_COLOR.textOnDark, anchor: "middle"}));
-    parts.push(dgText({x: nx + nodeW/2, y: nodeY + 40, text: dgOsLabel(osFamily), weight: 400, size: 11, fill: "#B5B5B5", anchor: "middle"}));
-    parts.push(dgRect({x: nx + 30, y: nodeY + 60, w: nodeW - 60, h: 60, gradient: true, shadow: true}));
-    parts.push(dgText({x: nx + nodeW/2, y: nodeY + 80, text: "CloudLens", weight: 600, size: 11, fill: DG_COLOR.textOnDark, anchor: "middle"}));
-    parts.push(dgText({x: nx + nodeW/2, y: nodeY + 102, text: "Sensor agent", weight: 400, size: 9, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  /* Conditional badges next to chip */
+  const chipWidth = chipLabel.length * 7 + 24;
+  let nextBadgeX = cgX + 14 + chipWidth + 8;
+  if (osFamily === "windows") {
+    parts.push(dgWindowsBadge(osFamily, nextBadgeX, cgY + 14));
+    nextBadgeX += 124;
   }
-  if (vmCount > sampleCount) {
-    parts.push(dgText({x: startX + blockW + 16, y: nodeY + nodeH/2, text: "+" + (vmCount - sampleCount) + " more VMs", weight: 600, size: 12, fill: DG_COLOR.textMuted, anchor: "start"}));
+  if (mirrorMethod === "erspan") {
+    parts.push(dgErspanBadge(mirrorMethod, nextBadgeX, cgY + 14));
+    nextBadgeX += 128;
   }
 
-  /* Gold mirror arrow → vController. Dashed when ERSPAN (tunnel). */
+  /* Multi-row VM grid */
+  let i = 0;
+  for (let r = 0; r < layout.rows; r++) {
+    const inThisRow = Math.min(layout.perRow, layout.shown - i);
+    const thisRowW = inThisRow * nodeW + (inThisRow - 1) * nodeGap;
+    const rowStartX = cgX + (cgW - thisRowW) / 2;
+    for (let c = 0; c < inThisRow; c++) {
+      const nx = rowStartX + c * (nodeW + nodeGap);
+      const ny = cgInnerTop + r * (nodeH + rowGap);
+      parts.push(dgRenderVm(nx, ny, nodeW, nodeH, osFamily));
+      i++;
+    }
+  }
+  if (layout.more > 0) {
+    const lastRowY = cgInnerTop + (layout.rows - 1) * (nodeH + rowGap);
+    parts.push(dgText({x: cgX + cgW - 24, y: lastRowY + nodeH/2, text: "+" + layout.more + " more VMs", weight: 600, size: 12, fill: DG_COLOR.textMuted, anchor: "end"}));
+  }
+
+  /* Gold mirror arrow with proportional thickness, dashed for ERSPAN */
   const cgBottomY = cgY + cgH;
   const vcY = cgBottomY + 60;
   parts.push(dgBezierArrow({x1: W/2, y1: cgBottomY, x2: W/2, y2: vcY, color: DG_COLOR.gold, glow: true,
+    strokeWidth: arrowWidth,
     dasharray: isErspan ? "6 4" : null,
-    label: dgMirrorLabel(mirrorMethod) + ": " + totalTraffic + " Gbps aggregate"}));
+    label: dgMirrorLabel(mirrorMethod) + ": " + totalTrafficLabel + " Gbps aggregate"}));
 
   const vcW = 300, vcH = 64, vcX = W/2 - vcW/2;
   parts.push(dgRect({x: vcX, y: vcY, w: vcW, h: vcH, gradient: true, shadow: true}));
@@ -1584,6 +1653,7 @@ function renderDiagram() {
   parts.push(dgRect({x: tlX, y: toolsY, w: tlW, h: tlH, fill: DG_COLOR.customer, shadow: true}));
   parts.push(dgText({x: W/2, y: toolsY + 27, text: "Network Tools", weight: 600, size: 12, fill: DG_COLOR.textOnDark, anchor: "middle"}));
 
+  const H = toolsY + tlH + 56;
   parts.push(dgFooterStrip({width: W, height: H}));
 
   return dgSvg({width: W, height: H, body: parts.join("")});
