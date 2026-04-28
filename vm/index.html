@@ -210,6 +210,11 @@
   #cfgToast.error { border-left-color: #FF4444; }
   #cfgToast.success { border-left-color: #00C853; }
   @media print { #cfgToast { display: none !important; } }
+  @media print {
+    #diagramSection { page-break-before: always; page-break-inside: avoid; padding: 24px 0; background: #FFFFFF !important; }
+    #diagramSection .results-card { background: #FFFFFF !important; color: #1A1A1A !important; box-shadow: none !important; }
+    #diagramExports { display: none !important; }
+  }
   /* Validation banner */
   #validationBanner { display: none; margin: 0 0 24px 0; border-radius: 8px; padding: 16px 20px; font-size: 15px; line-height: 1.5; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
   #validationBanner.show { display: block; }
@@ -1145,6 +1150,14 @@ function generateMarkdownReport() {
   L.push("| Install Method | " + ctx.installMethod + " |");
   L.push("| Kernel Headers | " + ctx.kernelHeaders + " |");
   L.push("| Debug | `" + ctx.debug + "` |"); L.push("");
+  /* Architecture diagram (inline SVG) */
+  const archSvg = (typeof getDiagramSvgString === "function") ? getDiagramSvgString() : "";
+  if (archSvg) {
+    L.push("## Architecture"); L.push("");
+    L.push(archSvg); L.push("");
+    L.push("> If your markdown viewer does not render inline SVG, view the live diagram in the [calculator](" + location.href + ").");
+    L.push("");
+  }
   L.push("## 2. CloudLens Connection"); L.push("");
   L.push("| Setting | Value |"); L.push("|---|---|");
   L.push("| Sensor Version | `" + ctx.sensorVersion + "` |");
