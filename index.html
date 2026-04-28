@@ -383,6 +383,14 @@
 
   <div id="validationBanner" role="alert" aria-live="polite"></div>
 
+  <div id="diagramSection" class="full-width" style="margin: 0 0 24px 0;">
+    <div class="card results-card" style="background: #FFFFFF; color: var(--dark);">
+      <h2 style="color: var(--dark);">Architecture Diagram</h2>
+      <div id="diagramHost" style="width: 100%; overflow-x: auto; min-height: 400px;"></div>
+      <div id="diagramExports" style="margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap;"></div>
+    </div>
+  </div>
+
   <div class="grid-3">
     <div class="card">
       <h2>Cluster <span class="badge">INFRA</span></h2>
@@ -899,6 +907,7 @@ function calculate() {
   }
 
   renderValidation(validate());
+  if (typeof refreshDiagramUi === "function") { try { refreshDiagramUi(); } catch (e) { /* diagram constants not yet initialized */ } }
 }
 
 /* ===================== ARTIFACT GENERATION ===================== */
@@ -1482,7 +1491,114 @@ $("cfgFileInput").addEventListener("change", (e) => {
 });
 $("shareCfgBtn").addEventListener("click", shareConfigByURL);
 
+/* ===================== DIAGRAM ===================== */
+const DG_COLOR = {
+  brand: "#E90029",
+  brandDark: "#C00022",
+  customer: "#2A2A2A",
+  containerFill: "#FAFAFA",
+  containerBorder: "#E5E5E5",
+  gold: "#D4AF37",
+  textOnDark: "#FFFFFF",
+  textOnLight: "#1A1A1A",
+  textMuted: "#6B7280"
+};
+const DG_FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif";
+const DG_RADIUS = 12;
+
+function dgEscape(s) { return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function dgRect(o) {
+  const f = o.gradient ? "url(#dgBrandGrad)" : (o.fill || "transparent");
+  const s = o.stroke ? 'stroke="' + o.stroke + '" stroke-width="' + (o.strokeWidth || 1) + '"' : "";
+  const sh = o.shadow ? 'filter="url(#dgShadow)"' : "";
+  return '<rect x="' + o.x + '" y="' + o.y + '" width="' + o.w + '" height="' + o.h + '" rx="' + (o.rx || DG_RADIUS) + '" fill="' + f + '" ' + s + ' ' + sh + '/>';
+}
+
+function dgText(o) {
+  return '<text x="' + o.x + '" y="' + o.y + '" font-family="' + DG_FONT + '" font-size="' + (o.size || 12) + '" font-weight="' + (o.weight || 400) + '" fill="' + (o.fill || DG_COLOR.textOnLight) + '" text-anchor="' + (o.anchor || "start") + '" dominant-baseline="middle">' + dgEscape(o.text) + '</text>';
+}
+
+function dgChevron(o) {
+  const sz = 6, x = o.x, y = o.y, c = o.color || DG_COLOR.customer;
+  const points = o.dir === "down"  ? (x-sz)+","+(y-sz)+" "+x+","+y+" "+(x+sz)+","+(y-sz)
+              : o.dir === "right"  ? (x-sz)+","+(y-sz)+" "+x+","+y+" "+(x-sz)+","+(y+sz)
+              : o.dir === "up"     ? (x-sz)+","+(y+sz)+" "+x+","+y+" "+(x+sz)+","+(y+sz)
+              :                      (x+sz)+","+(y-sz)+" "+x+","+y+" "+(x+sz)+","+(y+sz);
+  return '<polyline points="' + points + '" fill="none" stroke="' + c + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+}
+
+function dgBezierArrow(o) {
+  const cx = (o.x1 + o.x2) / 2, midY = (o.y1 + o.y2) / 2;
+  const path = "M" + o.x1 + "," + o.y1 + " C" + o.x1 + "," + midY + " " + o.x2 + "," + midY + " " + o.x2 + "," + o.y2;
+  const filter = o.glow ? 'filter="url(#dgGoldGlow)"' : '';
+  const da = o.dasharray ? 'stroke-dasharray="' + o.dasharray + '"' : '';
+  const stroke = '<path d="' + path + '" fill="none" stroke="' + (o.color || DG_COLOR.customer) + '" stroke-width="' + (o.glow ? 2.5 : 1.5) + '" ' + da + ' ' + filter + '/>';
+  const head = dgChevron({x: o.x2, y: o.y2, dir: "down", color: o.color || DG_COLOR.customer});
+  const lbl = o.label ? dgText({x: cx + 8, y: midY, text: o.label, fill: o.color, weight: 600, size: 11, anchor: "start"}) : "";
+  return stroke + head + lbl;
+}
+
+function dgSubgraphChip(o) {
+  const padX = 12;
+  const textWidth = o.label.length * 7 + padX * 2;
+  const c = o.color || DG_COLOR.customer;
+  return '<g><rect x="' + o.x + '" y="' + o.y + '" width="' + textWidth + '" height="22" rx="11" fill="' + c + '"/>' +
+    dgText({x: o.x + padX, y: o.y + 11, text: o.label, fill: DG_COLOR.textOnDark, size: 11, weight: 600}) +
+    '</g>';
+}
+
+function dgDefs() {
+  return '<defs>' +
+    '<linearGradient id="dgBrandGrad" x1="0%" y1="0%" x2="0%" y2="100%">' +
+      '<stop offset="0%" stop-color="' + DG_COLOR.brand + '"/>' +
+      '<stop offset="100%" stop-color="' + DG_COLOR.brandDark + '"/>' +
+    '</linearGradient>' +
+    '<filter id="dgShadow" x="-20%" y="-20%" width="140%" height="140%">' +
+      '<feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.08"/>' +
+    '</filter>' +
+    '<filter id="dgGoldGlow" x="-50%" y="-50%" width="200%" height="200%">' +
+      '<feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="' + DG_COLOR.gold + '" flood-opacity="0.45"/>' +
+    '</filter>' +
+    '<pattern id="dgDots" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">' +
+      '<circle cx="1" cy="1" r="0.6" fill="' + DG_COLOR.containerBorder + '"/>' +
+    '</pattern>' +
+  '</defs>';
+}
+
+function dgHeaderStrip(o) {
+  const right = o.customer ? (o.customer + " · " + new Date().toISOString().slice(0,10)) : new Date().toISOString().slice(0,10);
+  return dgText({x: 32, y: 24, text: o.title, weight: 600, size: 13, fill: DG_COLOR.textOnLight}) +
+         dgText({x: o.width - 32, y: 24, text: right, weight: 400, size: 11, fill: DG_COLOR.textMuted, anchor: "end"});
+}
+
+function dgFooterStrip(o) {
+  return dgText({x: o.width - 32, y: o.height - 12, text: "Keysight CloudLens Sizing Suite · v3.5", weight: 400, size: 9, fill: DG_COLOR.textMuted, anchor: "end"});
+}
+
+function dgSvg(o) {
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="' + o.width + '" height="' + o.height + '" viewBox="0 0 ' + o.width + ' ' + o.height + '" font-family="' + DG_FONT + '">' + dgDefs() + o.body + '</svg>';
+}
+
+/* Stubbed in Phase 0; replaced in Phase 1. */
+function renderDiagram() {
+  return dgSvg({width: 900, height: 540, body:
+    '<text x="450" y="270" text-anchor="middle" font-family="' + DG_FONT + '" font-size="16" fill="#999">Diagram coming in Phase 1</text>'
+  });
+}
+
+function refreshDiagramUi() {
+  const host = $("diagramHost");
+  if (!host) return;
+  while (host.firstChild) host.removeChild(host.firstChild);
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(renderDiagram(), "image/svg+xml");
+  const svg = doc.documentElement;
+  if (svg && svg.tagName.toLowerCase() === "svg") host.appendChild(document.importNode(svg, true));
+}
+
 calculate();
+refreshDiagramUi();
 bootstrapFromURL();
 </script>
 </body>
