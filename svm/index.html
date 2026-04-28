@@ -1420,9 +1420,39 @@ function dgFooterStrip(o) {
 function dgSvg(o) {
   return '<svg xmlns="http://www.w3.org/2000/svg" width="' + o.width + '" height="' + o.height + '" viewBox="0 0 ' + o.width + ' ' + o.height + '" font-family="' + DG_FONT + '">' + dgDefs() + o.body + '</svg>';
 }
-function dgRenderSite(site, x, y, w, h, idx) {
+/* === Reactive layout helpers ============================================ */
+function dgScaledHostLayout(actual) {
+  /* Per-site ESXi host count → reactive grid layout */
+  const a = Math.max(1, actual | 0);
+  if (a <= 3)  return { shown: a, rows: 1, perRow: a, more: 0 };
+  if (a <= 6)  return { shown: a, rows: 2, perRow: Math.ceil(a / 2), more: 0 };
+  if (a <= 12) return { shown: 6, rows: 2, perRow: 3, more: a - 6 };
+  return         { shown: 3, rows: 1, perRow: 3, more: a - 3 };
+}
+function dgScaleArrowWidth(traffic) {
+  const t = Math.max(0, traffic);
+  if (t < 1)   return 1.8;
+  if (t < 10)  return 2.4;
+  if (t < 50)  return 3.0;
+  if (t < 200) return 3.6;
+  if (t < 500) return 4.2;
+  return 5.0;
+}
+
+/* Compute the actual height a site needs given its host count + content */
+function dgSiteHeight(site) {
+  const layout = dgScaledHostLayout(site.esxiHosts || 1);
+  const hostH = 90, rowGap = 8;
+  return 50 + layout.rows * hostH + (layout.rows - 1) * rowGap + 14 + (site.clmPlacement === "shared" ? 24 : 36) + 14;
+}
+
+function dgRenderSite(site, x, y, w, idx) {
   const parts = [];
   const pad = 14;
+  const layout = dgScaledHostLayout(site.esxiHosts || 1);
+  const hostW = 76, hostH = 90, hostGap = 8, rowGap = 8;
+  const h = dgSiteHeight(site);
+
   parts.push('<g data-role="site-subgraph">');
   parts.push(dgRect({x, y, w, h, fill: DG_COLOR.containerFill, stroke: DG_COLOR.containerBorder, strokeWidth: 1, rx: 12}));
   parts.push(dgRect({x, y, w, h, fill: "url(#dgDots)", rx: 12}));
@@ -1430,29 +1460,33 @@ function dgRenderSite(site, x, y, w, h, idx) {
   const chipLabel = siteName + " · " + (site.esxiHosts || 0) + " hosts · " + (site.throughput || 0) + " Gbps";
   parts.push(dgSubgraphChip({x: x + pad, y: y + pad, label: chipLabel, color: DG_COLOR.customer}));
 
-  /* 3 sample ESXi hosts — each contains a nested CloudLens (sVM) box, matching K8s/VM brand pattern */
-  const sampleCount = Math.min(3, Math.max(site.esxiHosts || 1, 1));
-  const hostW = 76, hostH = 100, hostGap = 10;
-  const hostBlockW = sampleCount * hostW + (sampleCount - 1) * hostGap;
-  const hostStartX = x + (w - hostBlockW) / 2;
-  const hostY = y + 50;
-  for (let i = 0; i < sampleCount; i++) {
-    const hx = hostStartX + i * (hostW + hostGap);
-    /* Outer ESXi (customer asset) */
-    parts.push(dgRect({x: hx, y: hostY, w: hostW, h: hostH, fill: DG_COLOR.customer, shadow: true, rx: 8}));
-    parts.push(dgText({x: hx + hostW/2, y: hostY + 14, text: "ESXi", weight: 600, size: 10, fill: DG_COLOR.textOnDark, anchor: "middle"}));
-    /* Nested CloudLens sVM (brand-prominent, matches K8s "DaemonSet pod" / VM "Sensor agent" pattern) */
-    parts.push(dgRect({x: hx + 6, y: hostY + 28, w: hostW - 12, h: hostH - 36, gradient: true, shadow: false, rx: 6}));
-    parts.push(dgText({x: hx + hostW/2, y: hostY + 50, text: "CloudLens", weight: 600, size: 10, fill: DG_COLOR.textOnDark, anchor: "middle"}));
-    parts.push(dgText({x: hx + hostW/2, y: hostY + 70, text: "sVM", weight: 400, size: 9, fill: DG_COLOR.textOnDark, anchor: "middle"}));
-    parts.push(dgText({x: hx + hostW/2, y: hostY + 84, text: "(1 per host)", weight: 400, size: 8, fill: "#FFD7DC", anchor: "middle"}));
+  /* Multi-row ESXi host grid — each host has a nested CloudLens sVM box */
+  const hostsTopY = y + 50;
+  let i = 0;
+  for (let r = 0; r < layout.rows; r++) {
+    const inThisRow = Math.min(layout.perRow, layout.shown - i);
+    const thisRowW = inThisRow * hostW + (inThisRow - 1) * hostGap;
+    const rowStartX = x + (w - thisRowW) / 2;
+    for (let c = 0; c < inThisRow; c++) {
+      const hx = rowStartX + c * (hostW + hostGap);
+      const hy = hostsTopY + r * (hostH + rowGap);
+      parts.push(dgRect({x: hx, y: hy, w: hostW, h: hostH, fill: DG_COLOR.customer, shadow: true, rx: 8}));
+      parts.push(dgText({x: hx + hostW/2, y: hy + 14, text: "ESXi", weight: 600, size: 10, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+      parts.push(dgRect({x: hx + 6, y: hy + 26, w: hostW - 12, h: hostH - 32, gradient: true, shadow: false, rx: 6}));
+      parts.push(dgText({x: hx + hostW/2, y: hy + 46, text: "CloudLens", weight: 600, size: 10, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+      parts.push(dgText({x: hx + hostW/2, y: hy + 64, text: "sVM", weight: 400, size: 9, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+      parts.push(dgText({x: hx + hostW/2, y: hy + 78, text: "(1 per host)", weight: 400, size: 7, fill: "#FFD7DC", anchor: "middle"}));
+      i++;
+    }
   }
-  if ((site.esxiHosts || 0) > sampleCount) {
-    parts.push(dgText({x: hostStartX + hostBlockW + 6, y: hostY + hostH/2, text: "+" + ((site.esxiHosts) - sampleCount), weight: 600, size: 10, fill: DG_COLOR.textMuted, anchor: "start"}));
+  if (layout.more > 0) {
+    const lastRowY = hostsTopY + (layout.rows - 1) * (hostH + rowGap);
+    parts.push(dgText({x: x + w - pad, y: lastRowY + hostH/2, text: "+" + layout.more, weight: 600, size: 10, fill: DG_COLOR.textMuted, anchor: "end"}));
   }
 
   /* CLM box */
-  const clmY = hostY + hostH + 14;
+  const hostsBottomY = hostsTopY + layout.rows * hostH + (layout.rows - 1) * rowGap;
+  const clmY = hostsBottomY + 14;
   if (site.clmPlacement === "shared") {
     parts.push(dgText({x: x + w/2, y: clmY + 10, text: "(shared CLM, see suite-level)", weight: 400, size: 10, fill: DG_COLOR.textMuted, anchor: "middle"}));
   } else {
@@ -1461,7 +1495,7 @@ function dgRenderSite(site, x, y, w, h, idx) {
   }
 
   parts.push("</g>");
-  return parts.join("");
+  return { svg: parts.join(""), height: h };
 }
 
 function renderDiagram() {
@@ -1469,36 +1503,56 @@ function renderDiagram() {
     return dgSvg({width: 900, height: 200, body: '<text x="450" y="100" text-anchor="middle" font-family="' + DG_FONT + '" font-size="14" fill="#999">No sites configured</text>'});
   }
   const customerName = ($("customerName").value || "Customer").trim();
+  const kvoHa = $("kvoHa") ? $("kvoHa").value : "single";
   const siteCount = sites.length;
   const allShared = sites.length > 0 && sites.every(s => s.clmPlacement === "shared");
+  const isHaPair = kvoHa === "active-standby" || kvoHa === "ha-pair";
 
-  /* Layout: up to 3 sites per row */
+  const totalGbps = sites.reduce((s, x) => s + (parseFloat(x.throughput) || 0), 0);
+  const totalGbpsLabel = totalGbps.toFixed(1);
+  const arrowWidth = dgScaleArrowWidth(totalGbps);
+
+  /* Layout: up to 3 sites per row. Each site computes its own height via dgSiteHeight. */
   const sitesPerRow = Math.min(3, Math.max(siteCount, 1));
-  const siteW = 280, siteH = 220, siteGapX = 24, siteGapY = 24;
+  const siteW = 280, siteGapX = 24, siteGapY = 24;
   const rows = Math.ceil(siteCount / sitesPerRow);
   const sitesGridW = sitesPerRow * siteW + (sitesPerRow - 1) * siteGapX;
-  const sitesGridH = rows * siteH + (rows - 1) * siteGapY;
+
+  /* Compute row heights (max of all sites in that row) */
+  const rowHeights = [];
+  for (let r = 0; r < rows; r++) {
+    let maxH = 0;
+    for (let c = 0; c < sitesPerRow; c++) {
+      const i = r * sitesPerRow + c;
+      if (i < siteCount) maxH = Math.max(maxH, dgSiteHeight(sites[i]));
+    }
+    rowHeights.push(maxH);
+  }
+  const sitesGridH = rowHeights.reduce((a, b) => a + b, 0) + (rows - 1) * siteGapY;
 
   const W = Math.max(1000, sitesGridW + 120);
-  const H = 60 + sitesGridH + 60 + (allShared ? 70 : 0) + 60 + 64 + 60 + 54 + 60;
 
   const parts = [];
   parts.push(dgHeaderStrip({width: W, title: "CloudLens Visibility Topology · VMware sVM", customer: customerName}));
 
-  /* Sites grid */
+  /* Sites grid (variable per-row heights) */
   const gridStartX = (W - sitesGridW) / 2;
   const gridStartY = 56;
   let cyMax = gridStartY;
-  for (let i = 0; i < siteCount; i++) {
-    const row = Math.floor(i / sitesPerRow);
-    const col = i % sitesPerRow;
-    const sx = gridStartX + col * (siteW + siteGapX);
-    const sy = gridStartY + row * (siteH + siteGapY);
-    parts.push(dgRenderSite(sites[i], sx, sy, siteW, siteH, i));
-    cyMax = Math.max(cyMax, sy + siteH);
+  let runningY = gridStartY;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < sitesPerRow; c++) {
+      const i = r * sitesPerRow + c;
+      if (i >= siteCount) break;
+      const sx = gridStartX + c * (siteW + siteGapX);
+      const result = dgRenderSite(sites[i], sx, runningY, siteW, i);
+      parts.push(result.svg);
+      cyMax = Math.max(cyMax, runningY + result.height);
+    }
+    runningY += rowHeights[r] + siteGapY;
   }
 
-  /* Optional shared-CLM box (when all sites use shared CLM) */
+  /* Optional shared-CLM box */
   let convergenceY = cyMax + 60;
   if (allShared && siteCount > 0) {
     const sclmW = 300, sclmH = 56, sclmX = W/2 - sclmW/2, sclmY = cyMax + 40;
@@ -1506,44 +1560,65 @@ function renderDiagram() {
       dgText({x: W/2, y: sclmY + 22, text: "Shared CLM", weight: 600, size: 13, fill: DG_COLOR.textOnDark, anchor: "middle"}) +
       dgText({x: W/2, y: sclmY + 40, text: "single appliance · serves all sites", weight: 400, size: 10, fill: DG_COLOR.textOnDark, anchor: "middle"}) +
       '</g>');
-    /* Arrows from each site bottom → shared CLM top */
     for (let i = 0; i < siteCount; i++) {
       const row = Math.floor(i / sitesPerRow);
       const col = i % sitesPerRow;
       const sx = gridStartX + col * (siteW + siteGapX);
-      const sy = gridStartY + row * (siteH + siteGapY);
-      parts.push(dgBezierArrow({x1: sx + siteW/2, y1: sy + siteH, x2: W/2, y2: sclmY, color: DG_COLOR.customer}));
+      let sy = gridStartY;
+      for (let rr = 0; rr < row; rr++) sy += rowHeights[rr] + siteGapY;
+      const sH = dgSiteHeight(sites[i]);
+      parts.push(dgBezierArrow({x1: sx + siteW/2, y1: sy + sH, x2: W/2, y2: sclmY, color: DG_COLOR.customer}));
     }
     convergenceY = sclmY + sclmH + 50;
-    /* Arrow shared-CLM → KVO */
     parts.push(dgBezierArrow({x1: W/2, y1: sclmY + sclmH, x2: W/2, y2: convergenceY, color: DG_COLOR.customer}));
   } else {
-    /* Arrows from each per-site CLM directly → KVO */
+    /* Arrows from each per-site CLM → KVO (or KVO pair) */
     for (let i = 0; i < siteCount; i++) {
       const row = Math.floor(i / sitesPerRow);
       const col = i % sitesPerRow;
       const sx = gridStartX + col * (siteW + siteGapX);
-      const sy = gridStartY + row * (siteH + siteGapY);
-      parts.push(dgBezierArrow({x1: sx + siteW/2, y1: sy + siteH, x2: W/2, y2: convergenceY, color: DG_COLOR.customer}));
+      let sy = gridStartY;
+      for (let rr = 0; rr < row; rr++) sy += rowHeights[rr] + siteGapY;
+      const sH = dgSiteHeight(sites[i]);
+      parts.push(dgBezierArrow({x1: sx + siteW/2, y1: sy + sH, x2: W/2, y2: convergenceY, color: DG_COLOR.customer}));
     }
   }
 
-  /* KVO box (centralized) */
-  const kvoW = 320, kvoH = 64, kvoX = W/2 - kvoW/2;
-  parts.push(dgRect({x: kvoX, y: convergenceY, w: kvoW, h: kvoH, gradient: true, shadow: true}));
-  parts.push(dgText({x: W/2, y: convergenceY + 24, text: "KVO", weight: 600, size: 14, fill: DG_COLOR.textOnDark, anchor: "middle"}));
-  parts.push(dgText({x: W/2, y: convergenceY + 44, text: "Keysight Vision Orchestrator · centralized", weight: 400, size: 10, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  /* KVO — single box OR HA pair (Level 2 conditional shape variant) */
+  const kvoH = 64;
+  if (isHaPair) {
+    /* Two KVO boxes side by side with a thin "HA sync" connector between them */
+    const haW = 220, haGap = 24;
+    const haTotalW = 2 * haW + haGap;
+    const haX1 = W/2 - haTotalW/2;
+    const haX2 = haX1 + haW + haGap;
+    parts.push(dgRect({x: haX1, y: convergenceY, w: haW, h: kvoH, gradient: true, shadow: true}));
+    parts.push(dgText({x: haX1 + haW/2, y: convergenceY + 24, text: "KVO (Primary)", weight: 600, size: 13, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+    parts.push(dgText({x: haX1 + haW/2, y: convergenceY + 44, text: "Keysight Vision Orchestrator", weight: 400, size: 9, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+    parts.push(dgRect({x: haX2, y: convergenceY, w: haW, h: kvoH, gradient: true, shadow: true}));
+    parts.push(dgText({x: haX2 + haW/2, y: convergenceY + 24, text: "KVO (Standby)", weight: 600, size: 13, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+    parts.push(dgText({x: haX2 + haW/2, y: convergenceY + 44, text: "HA failover ready", weight: 400, size: 9, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+    /* HA sync connector (gold dashed thin line) */
+    parts.push('<line x1="' + (haX1 + haW) + '" y1="' + (convergenceY + kvoH/2) + '" x2="' + haX2 + '" y2="' + (convergenceY + kvoH/2) + '" stroke="' + DG_COLOR.gold + '" stroke-width="1.5" stroke-dasharray="3 3"/>');
+    parts.push(dgText({x: W/2, y: convergenceY + kvoH/2 - 8, text: "HA sync", weight: 600, size: 9, fill: DG_COLOR.gold, anchor: "middle"}));
+  } else {
+    const kvoW = 320, kvoX = W/2 - kvoW/2;
+    parts.push(dgRect({x: kvoX, y: convergenceY, w: kvoW, h: kvoH, gradient: true, shadow: true}));
+    parts.push(dgText({x: W/2, y: convergenceY + 24, text: "KVO", weight: 600, size: 14, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+    parts.push(dgText({x: W/2, y: convergenceY + 44, text: "Keysight Vision Orchestrator · centralized", weight: 400, size: 10, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  }
 
-  /* Gold value-flow arrow KVO → Tools */
+  /* Gold value-flow arrow KVO → Tools, stroke scales with throughput */
   const toolsY = convergenceY + kvoH + 50;
-  const totalGbps = sites.reduce((s, x) => s + (parseFloat(x.throughput) || 0), 0).toFixed(1);
   parts.push(dgBezierArrow({x1: W/2, y1: convergenceY + kvoH, x2: W/2, y2: toolsY, color: DG_COLOR.gold, glow: true,
-    label: "Mirrored: " + totalGbps + " Gbps aggregate"}));
+    strokeWidth: arrowWidth,
+    label: "Mirrored: " + totalGbpsLabel + " Gbps aggregate"}));
 
   const tlW = 220, tlH = 54, tlX = W/2 - tlW/2;
   parts.push(dgRect({x: tlX, y: toolsY, w: tlW, h: tlH, fill: DG_COLOR.customer, shadow: true}));
   parts.push(dgText({x: W/2, y: toolsY + 27, text: "Network Tools", weight: 600, size: 12, fill: DG_COLOR.textOnDark, anchor: "middle"}));
 
+  const H = toolsY + tlH + 56;
   parts.push(dgFooterStrip({width: W, height: H}));
 
   return dgSvg({width: W, height: H, body: parts.join("")});
