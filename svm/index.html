@@ -1430,28 +1430,29 @@ function dgRenderSite(site, x, y, w, h, idx) {
   const chipLabel = siteName + " · " + (site.esxiHosts || 0) + " hosts · " + (site.throughput || 0) + " Gbps";
   parts.push(dgSubgraphChip({x: x + pad, y: y + pad, label: chipLabel, color: DG_COLOR.customer}));
 
-  /* 3 sample ESXi hosts inside the site */
+  /* 3 sample ESXi hosts — each contains a nested CloudLens (sVM) box, matching K8s/VM brand pattern */
   const sampleCount = Math.min(3, Math.max(site.esxiHosts || 1, 1));
-  const hostW = 70, hostH = 50, hostGap = 10;
+  const hostW = 76, hostH = 100, hostGap = 10;
   const hostBlockW = sampleCount * hostW + (sampleCount - 1) * hostGap;
   const hostStartX = x + (w - hostBlockW) / 2;
   const hostY = y + 50;
   for (let i = 0; i < sampleCount; i++) {
     const hx = hostStartX + i * (hostW + hostGap);
-    parts.push(dgRect({x: hx, y: hostY, w: hostW, h: hostH, fill: DG_COLOR.customer, shadow: false, rx: 8}));
-    parts.push(dgText({x: hx + hostW/2, y: hostY + hostH/2, text: "ESXi", weight: 600, size: 10, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+    /* Outer ESXi (customer asset) */
+    parts.push(dgRect({x: hx, y: hostY, w: hostW, h: hostH, fill: DG_COLOR.customer, shadow: true, rx: 8}));
+    parts.push(dgText({x: hx + hostW/2, y: hostY + 14, text: "ESXi", weight: 600, size: 10, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+    /* Nested CloudLens sVM (brand-prominent, matches K8s "DaemonSet pod" / VM "Sensor agent" pattern) */
+    parts.push(dgRect({x: hx + 6, y: hostY + 28, w: hostW - 12, h: hostH - 36, gradient: true, shadow: false, rx: 6}));
+    parts.push(dgText({x: hx + hostW/2, y: hostY + 50, text: "CloudLens", weight: 600, size: 10, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+    parts.push(dgText({x: hx + hostW/2, y: hostY + 70, text: "sVM", weight: 400, size: 9, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+    parts.push(dgText({x: hx + hostW/2, y: hostY + 84, text: "(1 per host)", weight: 400, size: 8, fill: "#FFD7DC", anchor: "middle"}));
   }
   if ((site.esxiHosts || 0) > sampleCount) {
     parts.push(dgText({x: hostStartX + hostBlockW + 6, y: hostY + hostH/2, text: "+" + ((site.esxiHosts) - sampleCount), weight: 600, size: 10, fill: DG_COLOR.textMuted, anchor: "start"}));
   }
 
-  /* sVM band below hosts */
-  const svmY = hostY + hostH + 12;
-  parts.push(dgRect({x: x + pad, y: svmY, w: w - 2 * pad, h: 36, gradient: true, shadow: true}));
-  parts.push(dgText({x: x + w/2, y: svmY + 18, text: (site.esxiHosts || 0) + " sVMs (1 per host)", weight: 600, size: 11, fill: DG_COLOR.textOnDark, anchor: "middle"}));
-
   /* CLM box */
-  const clmY = svmY + 36 + 14;
+  const clmY = hostY + hostH + 14;
   if (site.clmPlacement === "shared") {
     parts.push(dgText({x: x + w/2, y: clmY + 10, text: "(shared CLM, see suite-level)", weight: 400, size: 10, fill: DG_COLOR.textMuted, anchor: "middle"}));
   } else {
@@ -1473,7 +1474,7 @@ function renderDiagram() {
 
   /* Layout: up to 3 sites per row */
   const sitesPerRow = Math.min(3, Math.max(siteCount, 1));
-  const siteW = 280, siteH = 200, siteGapX = 24, siteGapY = 24;
+  const siteW = 280, siteH = 220, siteGapX = 24, siteGapY = 24;
   const rows = Math.ceil(siteCount / sitesPerRow);
   const sitesGridW = sitesPerRow * siteW + (sitesPerRow - 1) * siteGapX;
   const sitesGridH = rows * siteH + (rows - 1) * siteGapY;
