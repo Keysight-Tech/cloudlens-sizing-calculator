@@ -1588,7 +1588,8 @@ function dgBezierArrow(o) {
   const path = "M" + o.x1 + "," + o.y1 + " C" + o.x1 + "," + midY + " " + o.x2 + "," + midY + " " + o.x2 + "," + o.y2;
   const filter = o.glow ? 'filter="url(#dgGoldGlow)"' : '';
   const da = o.dasharray ? 'stroke-dasharray="' + o.dasharray + '"' : '';
-  const stroke = '<path d="' + path + '" fill="none" stroke="' + (o.color || DG_COLOR.customer) + '" stroke-width="' + (o.glow ? 2.5 : 1.5) + '" ' + da + ' ' + filter + '/>';
+  const sw = o.strokeWidth != null ? o.strokeWidth : (o.glow ? 2.5 : 1.5);
+  const stroke = '<path d="' + path + '" fill="none" stroke="' + (o.color || DG_COLOR.customer) + '" stroke-width="' + sw + '" ' + da + ' ' + filter + '/>';
   const head = dgChevron({x: o.x2, y: o.y2, dir: "down", color: o.color || DG_COLOR.customer});
   const lbl = o.label ? dgText({x: cx + 8, y: midY, text: o.label, fill: o.color, weight: 600, size: 11, anchor: "start"}) : "";
   return stroke + head + lbl;
@@ -1639,57 +1640,124 @@ function dgPlatformLabel(p) {
   return ({eks:"EKS",aks:"AKS",gke:"GKE",openshift:"OpenShift",rancher:"Rancher",self:"Self-Managed"}[p] || p);
 }
 
-function dgClusterDS(opts) {
-  /* DaemonSet: each sample worker contains a CloudLens pod */
+/* === Reactive layout helpers (Level 1 — scale-aware count) ============= */
+function dgScaledLayout(actual) {
+  /* Choose how many sample boxes to show + how many rows.
+     Customer sees the cluster grow visually as count rises. */
+  const a = Math.max(1, actual | 0);
+  if (a <= 3)  return { shown: a, rows: 1, perRow: a, more: 0 };
+  if (a <= 6)  return { shown: a, rows: 2, perRow: Math.ceil(a / 2), more: 0 };
+  if (a <= 12) return { shown: 6, rows: 2, perRow: 3, more: a - 6 };
+  return         { shown: 3, rows: 1, perRow: 3, more: a - 3 };
+}
+
+/* === Resource-proportional helpers (Level 3) =========================== */
+function dgScaleNodeWidth(vcpu) {
+  /* Worker box width grows with vCPU — visually telegraphs node size */
+  if (!vcpu || vcpu <= 4) return 170;
+  if (vcpu <= 16) return 170 + (vcpu - 4) * 2.5;          // 4→170, 16→200
+  if (vcpu <= 64) return 200 + (vcpu - 16) * 0.625;       // 16→200, 64→230
+  return 240;                                              // clamp
+}
+function dgScaleArrowWidth(traffic) {
+  /* Gold arrow gets bolder as throughput grows. Logarithmic so 100 Gbps doesn't look 100× thicker than 1 Gbps. */
+  const t = Math.max(0, traffic);
+  if (t < 1)   return 1.8;
+  if (t < 10)  return 2.4;
+  if (t < 50)  return 3.0;
+  if (t < 200) return 3.6;
+  if (t < 500) return 4.2;
+  return 5.0;
+}
+
+/* === Conditional shape badges (Level 2 — input-driven variants) ======== */
+function dgPlatformBadge(platform, x, y) {
+  /* OpenShift surfaces the SCC requirement as an explicit badge — ops teams notice */
+  if (platform !== "openshift") return "";
+  return '<g><rect x="' + x + '" y="' + y + '" width="146" height="22" rx="11" fill="#7A1ED9"/>' +
+    dgText({x: x + 11, y: y + 11, text: "OpenShift SCC required", fill: DG_COLOR.textOnDark, size: 10, weight: 600}) + '</g>';
+}
+function dgPrivilegedBadge(privileged, x, y) {
+  if (privileged !== "true") return "";
+  return '<g><rect x="' + x + '" y="' + y + '" width="98" height="22" rx="11" fill="#0066CC"/>' +
+    dgText({x: x + 11, y: y + 11, text: "Privileged: ON", fill: DG_COLOR.textOnDark, size: 10, weight: 600}) + '</g>';
+}
+
+function dgRenderWorker(nx, ny, nodeW, nodeH, nodeCpu) {
   const parts = [];
-  const sampleCount = opts.sampleCount, nodeW = opts.nodeW, nodeH = opts.nodeH, nodeGap = opts.nodeGap;
-  const blockW = sampleCount * nodeW + (sampleCount - 1) * nodeGap;
-  const startX = opts.cgX + (opts.cgW - blockW) / 2;
-  const nodeY = opts.cgY + 70;
-  for (let i = 0; i < sampleCount; i++) {
-    const nx = startX + i * (nodeW + nodeGap);
-    parts.push(dgRect({x: nx, y: nodeY, w: nodeW, h: nodeH, fill: DG_COLOR.customer, shadow: true}));
-    parts.push(dgText({x: nx + nodeW/2, y: nodeY + 22, text: "Worker", weight: 600, size: 12, fill: DG_COLOR.textOnDark, anchor: "middle"}));
-    parts.push(dgText({x: nx + nodeW/2, y: nodeY + 40, text: opts.nodeCpu + " vCPU", weight: 400, size: 11, fill: "#B5B5B5", anchor: "middle"}));
-    parts.push(dgRect({x: nx + 30, y: nodeY + 60, w: nodeW - 60, h: 60, gradient: true, shadow: true}));
-    parts.push(dgText({x: nx + nodeW/2, y: nodeY + 80, text: "CloudLens", weight: 600, size: 11, fill: DG_COLOR.textOnDark, anchor: "middle"}));
-    parts.push(dgText({x: nx + nodeW/2, y: nodeY + 102, text: "DaemonSet pod", weight: 400, size: 9, fill: DG_COLOR.textOnDark, anchor: "middle"}));
-  }
-  if (opts.nodeCount > sampleCount) {
-    parts.push(dgText({x: startX + blockW + 16, y: nodeY + nodeH/2, text: "+" + (opts.nodeCount - sampleCount) + " more nodes", weight: 600, size: 12, fill: DG_COLOR.textMuted, anchor: "start"}));
-  }
+  parts.push(dgRect({x: nx, y: ny, w: nodeW, h: nodeH, fill: DG_COLOR.customer, shadow: true}));
+  parts.push(dgText({x: nx + nodeW/2, y: ny + 22, text: "Worker", weight: 600, size: 12, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  parts.push(dgText({x: nx + nodeW/2, y: ny + 40, text: nodeCpu + " vCPU", weight: 400, size: 11, fill: "#B5B5B5", anchor: "middle"}));
+  /* Nested CloudLens box */
+  parts.push(dgRect({x: nx + 24, y: ny + 60, w: nodeW - 48, h: 60, gradient: true, shadow: true}));
+  parts.push(dgText({x: nx + nodeW/2, y: ny + 80, text: "CloudLens", weight: 600, size: 11, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  parts.push(dgText({x: nx + nodeW/2, y: ny + 102, text: "DaemonSet pod", weight: 400, size: 9, fill: DG_COLOR.textOnDark, anchor: "middle"}));
   return parts.join("");
+}
+
+function dgRenderAppPodWithSidecar(nx, ny, nodeW, nodeH) {
+  const parts = [];
+  parts.push(dgRect({x: nx, y: ny, w: nodeW, h: nodeH, fill: DG_COLOR.customer, shadow: true}));
+  parts.push(dgText({x: nx + 60, y: ny + 22, text: "App Pod", weight: 600, size: 12, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  parts.push(dgText({x: nx + 60, y: ny + 40, text: "application", weight: 400, size: 11, fill: "#B5B5B5", anchor: "middle"}));
+  parts.push(dgRect({x: nx + 18, y: ny + 58, w: 84, h: 64, fill: "#3A3A3A", shadow: false, rx: 8}));
+  parts.push(dgText({x: nx + 60, y: ny + 90, text: "app", weight: 400, size: 10, fill: "#A5A5A5", anchor: "middle"}));
+  parts.push(dgRect({x: nx + 110, y: ny + 58, w: nodeW - 128, h: 64, gradient: true, shadow: true}));
+  parts.push(dgText({x: nx + 110 + (nodeW - 128) / 2, y: ny + 80, text: "CloudLens", weight: 600, size: 11, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  parts.push(dgText({x: nx + 110 + (nodeW - 128) / 2, y: ny + 100, text: "Sidecar", weight: 400, size: 9, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  return parts.join("");
+}
+
+function dgClusterDS(opts) {
+  /* Multi-row, scale-aware DaemonSet layout */
+  const parts = [];
+  const layout = dgScaledLayout(opts.nodeCount);
+  const nodeW = opts.nodeW, nodeH = 130, nodeGap = 18, rowGap = 16;
+  const rowW = layout.perRow * nodeW + (layout.perRow - 1) * nodeGap;
+  const startX = opts.cgX + (opts.cgW - rowW) / 2;
+  const startY = opts.cgY + 50;
+  let i = 0;
+  for (let r = 0; r < layout.rows; r++) {
+    const inThisRow = Math.min(layout.perRow, layout.shown - i);
+    const thisRowW = inThisRow * nodeW + (inThisRow - 1) * nodeGap;
+    const rowStartX = opts.cgX + (opts.cgW - thisRowW) / 2;
+    for (let c = 0; c < inThisRow; c++) {
+      const nx = rowStartX + c * (nodeW + nodeGap);
+      const ny = startY + r * (nodeH + rowGap);
+      parts.push(dgRenderWorker(nx, ny, nodeW, nodeH, opts.nodeCpu));
+      i++;
+    }
+  }
+  if (layout.more > 0) {
+    const lastRowY = startY + (layout.rows - 1) * (nodeH + rowGap);
+    parts.push(dgText({x: opts.cgX + opts.cgW - 24, y: lastRowY + nodeH/2, text: "+" + layout.more + " more nodes", weight: 600, size: 12, fill: DG_COLOR.textMuted, anchor: "end"}));
+  }
+  return { svg: parts.join(""), bottomY: startY + layout.rows * nodeH + (layout.rows - 1) * rowGap };
 }
 
 function dgClusterSC(opts) {
-  /* Sidecar: each sample app pod has a CloudLens sidecar attached on the right */
   const parts = [];
-  const sampleCount = opts.sampleCount, nodeW = opts.nodeW + 30, nodeH = opts.nodeH, nodeGap = opts.nodeGap;
-  const blockW = sampleCount * nodeW + (sampleCount - 1) * nodeGap;
-  const startX = opts.cgX + (opts.cgW - blockW) / 2;
-  const nodeY = opts.cgY + 70;
-  for (let i = 0; i < sampleCount; i++) {
-    const nx = startX + i * (nodeW + nodeGap);
-    parts.push(dgRect({x: nx, y: nodeY, w: nodeW, h: nodeH, fill: DG_COLOR.customer, shadow: true}));
-    parts.push(dgText({x: nx + 60, y: nodeY + 22, text: "App Pod", weight: 600, size: 12, fill: DG_COLOR.textOnDark, anchor: "middle"}));
-    parts.push(dgText({x: nx + 60, y: nodeY + 40, text: "application", weight: 400, size: 11, fill: "#B5B5B5", anchor: "middle"}));
-    parts.push(dgRect({x: nx + 18, y: nodeY + 58, w: 84, h: 64, fill: "#3A3A3A", shadow: false, rx: 8}));
-    parts.push(dgText({x: nx + 60, y: nodeY + 90, text: "app", weight: 400, size: 10, fill: "#A5A5A5", anchor: "middle"}));
-    /* Sidecar attached on right */
-    parts.push(dgRect({x: nx + 110, y: nodeY + 58, w: 90, h: 64, gradient: true, shadow: true}));
-    parts.push(dgText({x: nx + 155, y: nodeY + 80, text: "CloudLens", weight: 600, size: 11, fill: DG_COLOR.textOnDark, anchor: "middle"}));
-    parts.push(dgText({x: nx + 155, y: nodeY + 100, text: "Sidecar", weight: 400, size: 9, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+  const layout = dgScaledLayout(opts.sidecarPods);
+  const nodeW = 210, nodeH = 130, nodeGap = 18, rowGap = 16;
+  const rowW = layout.perRow * nodeW + (layout.perRow - 1) * nodeGap;
+  const startY = opts.cgY + 50;
+  let i = 0;
+  for (let r = 0; r < layout.rows; r++) {
+    const inThisRow = Math.min(layout.perRow, layout.shown - i);
+    const thisRowW = inThisRow * nodeW + (inThisRow - 1) * nodeGap;
+    const rowStartX = opts.cgX + (opts.cgW - thisRowW) / 2;
+    for (let c = 0; c < inThisRow; c++) {
+      const nx = rowStartX + c * (nodeW + nodeGap);
+      const ny = startY + r * (nodeH + rowGap);
+      parts.push(dgRenderAppPodWithSidecar(nx, ny, nodeW, nodeH));
+      i++;
+    }
   }
-  if (opts.sidecarPods > sampleCount) {
-    parts.push(dgText({x: startX + blockW + 16, y: nodeY + nodeH/2, text: "+" + (opts.sidecarPods - sampleCount) + " more app pods", weight: 600, size: 12, fill: DG_COLOR.textMuted, anchor: "start"}));
+  if (layout.more > 0) {
+    const lastRowY = startY + (layout.rows - 1) * (nodeH + rowGap);
+    parts.push(dgText({x: opts.cgX + opts.cgW - 24, y: lastRowY + nodeH/2, text: "+" + layout.more + " more app pods", weight: 600, size: 12, fill: DG_COLOR.textMuted, anchor: "end"}));
   }
-  return parts.join("");
-}
-
-function dgClusterHybrid(opts) {
-  /* Hybrid: DaemonSet row on top, Sidecar row on bottom — within larger cluster */
-  return dgClusterDS({...opts, cgY: opts.cgY, nodeH: 130}) +
-         dgClusterSC({...opts, cgY: opts.cgY + 160, nodeH: 130});
+  return { svg: parts.join(""), bottomY: startY + layout.rows * nodeH + (layout.rows - 1) * rowGap };
 }
 
 function renderDiagram() {
@@ -1700,13 +1768,12 @@ function renderDiagram() {
   const sidecarPods = parseInt($("sidecarPods").value) || 0;
   const sidecarTraffic = parseFloat($("sidecarTraffic").value) || 0;
   const mode = $("mode").value;
+  const privileged = $("privileged").value;
   const sensorServer = $("sensorServer").value || "vcontroller.example.com";
   const releaseName = $("releaseName").value || "cloudlens-agent";
 
   const W = 1000;
-  const isHybrid = mode === "hybrid";
-  const cgH = isHybrid ? 360 : 230;
-  const H = isHybrid ? 720 : 590;
+  const cgX = 60, cgY = 60, cgW = W - 120;
 
   /* Aggregate traffic depending on mode */
   let totalTraffic = 0;
@@ -1714,30 +1781,62 @@ function renderDiagram() {
   if (mode === "sidecar" || mode === "hybrid") totalTraffic += sidecarPods * sidecarTraffic;
   const totalTrafficLabel = totalTraffic.toFixed(1);
 
+  /* Resource-proportional sizing */
+  const nodeW = dgScaleNodeWidth(nodeCpu);
+  const arrowWidth = dgScaleArrowWidth(totalTraffic);
+
   const parts = [];
   parts.push(dgHeaderStrip({width: W, title: "CloudLens Visibility Topology · Kubernetes", customer: releaseName}));
 
-  /* Cluster subgraph */
-  const cgX = 60, cgY = 56, cgW = W - 120;
+  /* Build cluster body first to determine actual height — layout is now reactive */
+  const dsOpts = { cgX, cgY, cgW, nodeCount, nodeCpu, sidecarPods, nodeW };
+  let dsBody = "", scBody = "", cgBottomY = cgY + 200;
+  if (mode === "daemonset") {
+    const r = dgClusterDS(dsOpts);
+    dsBody = r.svg; cgBottomY = r.bottomY;
+  } else if (mode === "sidecar") {
+    const r = dgClusterSC(dsOpts);
+    scBody = r.svg; cgBottomY = r.bottomY;
+  } else {
+    /* Hybrid: DS top, SC bottom — actual height is sum + gap */
+    const dsR = dgClusterDS(dsOpts);
+    const scOpts = { ...dsOpts, cgY: dsR.bottomY + 28 };
+    const scR = dgClusterSC(scOpts);
+    dsBody = dsR.svg; scBody = scR.svg; cgBottomY = scR.bottomY;
+  }
+
+  /* Cluster subgraph — height grows to fit content */
+  const cgH = (cgBottomY + 28) - cgY;  // 28px bottom padding
   parts.push(dgRect({x: cgX, y: cgY, w: cgW, h: cgH, fill: DG_COLOR.containerFill, stroke: DG_COLOR.containerBorder, strokeWidth: 1, rx: 14}));
   parts.push(dgRect({x: cgX, y: cgY, w: cgW, h: cgH, fill: "url(#dgDots)", rx: 14}));
+
+  /* Subgraph chips — multi-line if many badges */
   const chipLabel = dgPlatformLabel(platform) + " · " + nodeCount + " nodes · " + nodeCpu + " vCPU each";
   parts.push(dgSubgraphChip({x: cgX + 14, y: cgY + 14, label: chipLabel, color: DG_COLOR.customer}));
 
-  /* Mode-specific cluster body */
-  const sampleCount = Math.min(3, mode === "sidecar" ? Math.max(sidecarPods, 1) : Math.max(nodeCount, 1));
-  const clusterOpts = {
-    cgX, cgY, cgW, sampleCount, nodeW: 180, nodeH: 130, nodeGap: 24,
-    nodeCount, nodeCpu, sidecarPods
-  };
-  if (mode === "daemonset") parts.push(dgClusterDS(clusterOpts));
-  else if (mode === "sidecar") parts.push(dgClusterSC(clusterOpts));
-  else parts.push(dgClusterHybrid(clusterOpts));
+  /* Conditional badges — appear only when input warrants */
+  let badgeX = cgX + 14;
+  const badgeY = cgY + 14 - 28;  /* above chip if multi-row, but simpler: place to right of chip */
+  /* Actually place badges to the RIGHT of chip on same row */
+  const chipWidth = chipLabel.length * 7 + 24;
+  let nextBadgeX = cgX + 14 + chipWidth + 8;
+  if (platform === "openshift") {
+    parts.push(dgPlatformBadge(platform, nextBadgeX, cgY + 14));
+    nextBadgeX += 154;
+  }
+  if (privileged === "true") {
+    parts.push(dgPrivilegedBadge(privileged, nextBadgeX, cgY + 14));
+    nextBadgeX += 106;
+  }
 
-  /* Gold mirror arrow → vController */
-  const cgBottomY = cgY + cgH;
-  const vcY = cgBottomY + 60;
-  parts.push(dgBezierArrow({x1: W/2, y1: cgBottomY, x2: W/2, y2: vcY, color: DG_COLOR.gold, glow: true,
+  /* Insert cluster body */
+  parts.push(dsBody);
+  parts.push(scBody);
+
+  /* Gold mirror arrow → vController, stroke-width scales with traffic */
+  const vcY = cgY + cgH + 56;
+  parts.push(dgBezierArrow({x1: W/2, y1: cgY + cgH, x2: W/2, y2: vcY, color: DG_COLOR.gold, glow: true,
+    strokeWidth: arrowWidth,
     label: "Mirrored: " + totalTrafficLabel + " Gbps aggregate"}));
 
   /* vController box */
@@ -1754,6 +1853,9 @@ function renderDiagram() {
   const tlW = 220, tlH = 54, tlX = W/2 - tlW/2;
   parts.push(dgRect({x: tlX, y: toolsY, w: tlW, h: tlH, fill: DG_COLOR.customer, shadow: true}));
   parts.push(dgText({x: W/2, y: toolsY + 27, text: "Network Tools", weight: 600, size: 12, fill: DG_COLOR.textOnDark, anchor: "middle"}));
+
+  /* Total height = tools bottom + footer pad */
+  const H = toolsY + tlH + 56;
 
   parts.push(dgFooterStrip({width: W, height: H}));
 
