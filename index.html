@@ -623,14 +623,14 @@ const DEFAULTS = {
   imageRepo: "<your-registry>/cloudlens/sensor", imageTag: "6.13.1-372",
   sensorServer: "clms.example.com", projectKey: "<PROJECT_KEY>", customTags: ""
 };
-const AIRTEL_EXAMPLE = {
+const EXAMPLE_PRESET = {
   platform: "openshift", containerRuntime: "crio", nodeCount: 150, podsPerNode: 200,
   nodeCpu: 32, nodeMem: 128, mode: "daemonset", nodeTraffic: "4", sidecarPods: 0,
   sidecarTraffic: "0.3", privileged: "true", debug: "false",
-  releaseName: "cloudlens-agent", namespace: "knative-serving",
-  chartPath: "./cloudlens-sensor-6.13.1-408.tgz",
-  imageRepo: "cellregistry.india.airtel.itm/mycloud_openshift/sensor", imageTag: "6.13.1-372",
-  sensorServer: "10.224.133.122", projectKey: "<REDACTED_PROJECT_KEY>", customTags: "customer=airtel,env=prod"
+  releaseName: "cloudlens-agent", namespace: "cloudlens-system",
+  chartPath: "./cloudlens-sensor-6.14.0-1.tgz",
+  imageRepo: "registry.example.com/cloudlens/sensor", imageTag: "6.14.0-1",
+  sensorServer: "10.0.0.10", projectKey: "<PROJECT_KEY>", customTags: "env=prod,team=ops"
 };
 
 /* ===================== HELPERS ===================== */
@@ -1234,7 +1234,7 @@ $("copyReport").addEventListener("click", function () {
   });
 });
 
-$("loadExampleBtn").addEventListener("click", function () { applyPreset(AIRTEL_EXAMPLE); });
+$("loadExampleBtn").addEventListener("click", function () { applyPreset(EXAMPLE_PRESET); });
 $("resetBtn").addEventListener("click", function () { applyPreset(DEFAULTS); });
 
 /* Auto-select crio when OpenShift is chosen */
