@@ -787,3 +787,36 @@ body { max-width: 100vw; }
   box-shadow: none !important;
 }
 
+
+/* ============================== */
+/*  H1 INSIDE RED HEADER → WHITE   */
+/* ============================== */
+/* The sizing calc has a red gradient header.  The global h1 rule clips
+   a red gradient to the text — which makes the title invisible (red on
+   red).  When the h1 is inside <header> (the calc's red header), force
+   solid white text instead. */
+header h1,
+.hero h1,
+.app-header h1,
+.calc-header h1 {
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  background-clip: unset !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+  color: #FFFFFF !important;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+header .subtitle,
+header p,
+header .lede {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Also fix any visible h2 / h3 inside the red header */
+header h2, header h3 {
+  color: #FFFFFF !important;
+  background: none !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+}
+
