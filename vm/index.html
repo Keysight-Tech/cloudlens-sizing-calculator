@@ -1741,25 +1741,7 @@ function copyDiagramMarkdown() {
 function openDiagramInTab() {
   const s = getDiagramSvgString();
   if (!s) return showToast("No diagram", "error");
-  const html = '<!doctype html><html><head><meta charset="utf-8"><title>Architecture Diagram</title><style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#FFFFFF;}</style></head><body>' + s + '<script>
-(function(){
-  var root = document.documentElement;
-  var stored = localStorage.getItem('cl-theme');
-  var theme = stored || 'light';
-  root.setAttribute('data-theme', theme);
-  var btn = document.getElementById('ks-theme-toggle');
-  if (btn) {
-    btn.textContent = theme === 'dark' ? '☀️' : '🌙';
-    btn.addEventListener('click', function(){
-      var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      root.setAttribute('data-theme', next);
-      localStorage.setItem('cl-theme', next);
-      btn.textContent = next === 'dark' ? '☀️' : '🌙';
-    });
-  }
-})();
-</script>
-</body></html>';
+  const html = '<!doctype html><html><head><meta charset="utf-8"><title>Architecture Diagram</title><style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#FFFFFF;}</style></head><body>' + s + '</body></html>';
   const blob = new Blob([html], {type: "text/html"});
   window.open(URL.createObjectURL(blob), "_blank");
 }
@@ -1768,10 +1750,10 @@ function renderDiagramExports() {
   const host = $("diagramExports");
   if (!host || host.children.length > 0) return;
   const buttons = [
-    {id:"downloadPngBtn", label:"📥 Download PNG", fn: downloadDiagramPng, title: "Download as 2× retina PNG"},
-    {id:"copySvgBtn", label:"📋 Copy SVG", fn: copyDiagramSvg, title: "Copy raw SVG markup to clipboard"},
-    {id:"copyMdBtn", label:"📄 Copy as Markdown", fn: copyDiagramMarkdown, title: "Copy as Markdown block with inline SVG"},
-    {id:"openTabBtn", label:"🖼 Open in new tab", fn: openDiagramInTab, title: "Open in a clean new tab"}
+    {id:"downloadPngBtn", label:"Download PNG", fn: downloadDiagramPng, title: "Download as 2× retina PNG"},
+    {id:"copySvgBtn", label:"Copy SVG", fn: copyDiagramSvg, title: "Copy raw SVG markup to clipboard"},
+    {id:"copyMdBtn", label:"Copy as Markdown", fn: copyDiagramMarkdown, title: "Copy as Markdown block with inline SVG"},
+    {id:"openTabBtn", label:"Open in new tab", fn: openDiagramInTab, title: "Open in a clean new tab"}
   ];
   buttons.forEach(b => {
     const btn = document.createElement("button");
@@ -1785,6 +1767,24 @@ function renderDiagramExports() {
 calculate();
 refreshDiagramUi();
 bootstrapFromURL();
+</script>
+<script>
+(function(){
+  var root = document.documentElement;
+  var stored = localStorage.getItem('cl-theme');
+  var theme = stored || 'light';
+  root.setAttribute('data-theme', theme);
+  var btn = document.getElementById('ks-theme-toggle');
+  if (btn) {
+    btn.textContent = theme === 'dark' ? '\u2600\uFE0F' : '\uD83C\uDF19';
+    btn.addEventListener('click', function(){
+      var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('cl-theme', next);
+      btn.textContent = next === 'dark' ? '\u2600\uFE0F' : '\uD83C\uDF19';
+    });
+  }
+})();
 </script>
 </body>
 </html>
