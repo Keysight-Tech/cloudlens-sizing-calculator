@@ -306,8 +306,16 @@
   #validationBanner.warning h3 { color: #92400E; }
   @media print { #validationBanner { display: none !important; } }
 </style>
+<link rel="stylesheet" href="../glass-upgrade.css" />
 </head>
 <body>
+  <!-- Keysight Technologies brand banner -->
+  <a href="https://www.keysight.com" target="_blank" rel="noopener" class="ks-top-banner" aria-label="Keysight Technologies">
+    KEYSIGHT TECHNOLOGIES
+  </a>
+  <!-- Theme toggle (light/dark) -->
+  <button type="button" class="theme-toggle-fab" id="ks-theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">🌙</button>
+
 <div class="container">
 
   <nav class="suite-nav" aria-label="CloudLens Sizing Suite">
@@ -1698,7 +1706,25 @@ function copyDiagramMarkdown() {
 function openDiagramInTab() {
   const s = getDiagramSvgString();
   if (!s) return showToast("No diagram", "error");
-  const html = '<!doctype html><html><head><meta charset="utf-8"><title>Architecture Diagram</title><style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#FFFFFF;}</style></head><body>' + s + '</body></html>';
+  const html = '<!doctype html><html><head><meta charset="utf-8"><title>Architecture Diagram</title><style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#FFFFFF;}</style></head><body>' + s + '<script>
+(function(){
+  var root = document.documentElement;
+  var stored = localStorage.getItem('cl-theme');
+  var theme = stored || 'light';
+  root.setAttribute('data-theme', theme);
+  var btn = document.getElementById('ks-theme-toggle');
+  if (btn) {
+    btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+    btn.addEventListener('click', function(){
+      var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('cl-theme', next);
+      btn.textContent = next === 'dark' ? '☀️' : '🌙';
+    });
+  }
+})();
+</script>
+</body></html>';
   const blob = new Blob([html], {type: "text/html"});
   window.open(URL.createObjectURL(blob), "_blank");
 }
