@@ -617,8 +617,26 @@
     </div>
   </div>
 
+  <!-- Procurement-grade callout (sits above footer) -->
+  <div class="card" style="background: linear-gradient(135deg, #FFF8E1, #FFFBEA); border-left: 4px solid var(--amber); margin-top: 24px;">
+    <div class="card-head">
+      <h2 style="color: #92400E;">For procurement-grade sizing, request a Keysight PS call</h2>
+      <span class="badge gold">NEXT STEP</span>
+    </div>
+    <p style="font-size: 14.5px; color: #5C3A07; line-height: 1.6; margin-bottom: 12px;">
+      The numbers on this page are <strong>list-price estimates</strong> built against the public Keysight Marketplace AMI restrictions and our live reference deployment. They are accurate enough to scope a deployment, choose a deployment path, and brief your AWS architect.
+    </p>
+    <p style="font-size: 14.5px; color: #5C3A07; line-height: 1.6; margin-bottom: 12px;">
+      Before locking the numbers into a Statement of Work, request a 30-minute sizing call with Keysight Professional Services. PS will validate the topology recommendation, stack any negotiated AWS Savings Plans or Reserved Instance discounts, factor in CloudLens licensing (which is BYOL and not in the AWS cost above), and adjust for traffic patterns the calculator cannot infer (cross-AZ collector placement, in-VPC vs out-of-VPC tool egress, multi-region federation overhead).
+    </p>
+    <div class="copy-btn-row">
+      <a href="https://www.keysight.com/find/cloudlens" target="_blank" rel="noopener" class="primary" style="display: inline-block; padding: 12px 22px; border-radius: 999px; background: var(--red); color: white; text-decoration: none; font-weight: 700; font-size: 14px;">Contact Keysight CloudLens</a>
+      <a href="mailto:?subject=Keysight%20CloudLens%20PS%20sizing%20call&body=Hi%2C%20I%27m%20transitioning%20infrastructure%20to%20AWS%20and%20need%20a%20procurement-grade%20sizing%20review%20for%20KVO%2C%20CLMS%2C%20and%20vPB.%20My%20draft%20sizing%20is%20here%3A%20https%3A%2F%2Fkeysight-tech.github.io%2Fcloudlens-sizing-calculator%2Faws%2F%20%E2%80%94%20can%20we%20set%2030%20minutes%20to%20validate%3F" style="display: inline-block; padding: 12px 22px; border-radius: 999px; background: white; color: var(--red); text-decoration: none; font-weight: 700; font-size: 14px; border: 1px solid var(--border);">Email a PS sizing request</a>
+    </div>
+  </div>
+
   <footer class="calc-foot">
-    © Keysight Technologies &nbsp;|&nbsp; CloudLens AWS EC2 Sizing Calculator v1.0 &nbsp;|&nbsp; Prepared by Brine Ketum, Solutions Engineer &nbsp;|&nbsp; Confidential &nbsp;|&nbsp; ⚠ Estimated sizing, verify with Keysight PS
+    © Keysight Technologies &nbsp;|&nbsp; CloudLens AWS EC2 Sizing Calculator v1.0 &nbsp;|&nbsp; Prepared by Brine Ketum, Solutions Engineer &nbsp;|&nbsp; Confidential &nbsp;|&nbsp; ⚠ Estimated sizing, verify with Keysight Professional Services before SOW commitment
   </footer>
 </div>
 
