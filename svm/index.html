@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CloudLens sVM (VMware) Sizing Calculator — Keysight</title>
+<title>CloudLens sVM (VMware) Sizing Calculator, Keysight</title>
 <style>
   :root {
     --red: #E90029; --red-dark: #B80020; --dark: #1A1A1A; --gray: #666;
@@ -427,22 +427,22 @@
   <div class="grid-2">
     <div class="card results-card">
       <h2>Fleet-Wide Totals</h2>
-      <div class="metric"><span class="label">Total sVMs Deployed</span><span class="value big" id="t_svm_count">—</span></div>
-      <div class="metric"><span class="label">Total Sensor vCPU</span><span class="value" id="t_vcpu">—</span></div>
-      <div class="metric"><span class="label">Total Sensor RAM</span><span class="value" id="t_ram">—</span></div>
-      <div class="metric"><span class="label">Total Sensor Disk</span><span class="value" id="t_disk">—</span></div>
-      <div class="metric"><span class="label">Total Virtual Traffic</span><span class="value big" id="t_traffic">—</span></div>
-      <div class="metric"><span class="label">Monitored VMs</span><span class="value" id="t_vms">—</span></div>
+      <div class="metric"><span class="label">Total sVMs Deployed</span><span class="value big" id="t_svm_count">, </span></div>
+      <div class="metric"><span class="label">Total Sensor vCPU</span><span class="value" id="t_vcpu">, </span></div>
+      <div class="metric"><span class="label">Total Sensor RAM</span><span class="value" id="t_ram">, </span></div>
+      <div class="metric"><span class="label">Total Sensor Disk</span><span class="value" id="t_disk">, </span></div>
+      <div class="metric"><span class="label">Total Virtual Traffic</span><span class="value big" id="t_traffic">, </span></div>
+      <div class="metric"><span class="label">Monitored VMs</span><span class="value" id="t_vms">, </span></div>
     </div>
 
     <div class="card results-card">
       <h2>License &amp; Components</h2>
-      <div class="metric"><span class="label">Throughput License (Gbps)</span><span class="value big" id="t_license">—</span></div>
-      <div class="metric"><span class="label">License Pack Option A</span><span class="value" id="t_pack_a">—</span></div>
-      <div class="metric"><span class="label">License Pack Option B</span><span class="value" id="t_pack_b">—</span></div>
-      <div class="metric"><span class="label">CLM Instances</span><span class="value" id="t_clm">—</span></div>
+      <div class="metric"><span class="label">Throughput License (Gbps)</span><span class="value big" id="t_license">, </span></div>
+      <div class="metric"><span class="label">License Pack Option A</span><span class="value" id="t_pack_a">, </span></div>
+      <div class="metric"><span class="label">License Pack Option B</span><span class="value" id="t_pack_b">, </span></div>
+      <div class="metric"><span class="label">CLM Instances</span><span class="value" id="t_clm">, </span></div>
       <div class="metric"><span class="label">KVO Instances</span><span class="value" id="t_kvo">1</span></div>
-      <div class="metric"><span class="label">Sites</span><span class="value" id="t_sites">—</span></div>
+      <div class="metric"><span class="label">Sites</span><span class="value" id="t_sites">, </span></div>
       <div class="verdict" id="verdict"><strong id="verdict_title"></strong><span id="verdict_text"></span></div>
     </div>
   </div>
@@ -464,7 +464,7 @@
       <tbody id="tierTbody"><!-- Populated by JS --></tbody>
     </table>
     <div class="info-box" style="background:#FFF8E1; border-left-color:var(--gold); color:#5D4E1F;">
-      <strong>⚠ Estimated — verify with Keysight PS.</strong>
+      <strong>⚠ Estimated, verify with Keysight PS.</strong>
       Tier 2 (4 vCPU / 8 GB / 40 GB / 3 NICs) is calibrated against a real-world 100 Gbps production reference deployment. Other tiers are inferred.
     </div>
   </div>
@@ -844,7 +844,7 @@ function calculate() {
     vx.textContent = "Multiple 100G license packs needed. SR-IOV and DPDK strongly recommended on sVMs. Engage Keysight PS early.";
   } else {
     v.className = "verdict bad";
-    vt.textContent = "✗ Extreme scale — architecture review required";
+    vt.textContent = "✗ Extreme scale, architecture review required";
     vx.textContent = "Beyond 400 Gbps aggregate. Likely requires hardware TAP supplementation or distributed sVM architecture.";
   }
 
@@ -865,7 +865,7 @@ function validate() {
   const kvoDisk = parseInt($("kvoDisk").value);
 
   if (!Array.isArray(sites) || sites.length === 0) {
-    errors.push("At least one site is required — use 'Add Site' to create one.");
+    errors.push("At least one site is required, use 'Add Site' to create one.");
   } else {
     sites.forEach((s, i) => {
       const lbl = s.name && s.name.trim() ? s.name.trim() : "Site " + (i + 1);
@@ -874,22 +874,22 @@ function validate() {
       if (!Number.isFinite(s.throughput) || s.throughput <= 0)
         errors.push(lbl + ": Throughput must be greater than 0 Gbps.");
       if (!s.name || !s.name.trim())
-        warnings.push("Site " + (i + 1) + " has no name — defaults will be used in artifacts.");
+        warnings.push("Site " + (i + 1) + " has no name, defaults will be used in artifacts.");
       if (Number.isFinite(s.monitoredVms) && s.monitoredVms < 0)
         errors.push(lbl + ": Monitored VM count cannot be negative.");
       if (!Number.isFinite(s.clmVcpu) || s.clmVcpu < 2)
-        warnings.push(lbl + ": CLM vCPU is below 2 — vController appliance requires minimum 4 vCPU per Keysight docs.");
+        warnings.push(lbl + ": CLM vCPU is below 2, vController appliance requires minimum 4 vCPU per Keysight docs.");
     });
   }
 
   if (!Number.isFinite(kvoVcpu) || kvoVcpu < 4)
-    warnings.push("KVO vCPU is below 4 — Keysight Vision Orchestrator requires 4 vCPU minimum.");
+    warnings.push("KVO vCPU is below 4, Keysight Vision Orchestrator requires 4 vCPU minimum.");
   if (!Number.isFinite(kvoRam) || kvoRam < 8)
-    warnings.push("KVO RAM is below 8 GB — KVO requires 8 GB minimum.");
+    warnings.push("KVO RAM is below 8 GB, KVO requires 8 GB minimum.");
   if (!Number.isFinite(kvoDisk) || kvoDisk < 100)
-    warnings.push("KVO disk is below 100 GB — KVO requires 100 GB minimum.");
+    warnings.push("KVO disk is below 100 GB, KVO requires 100 GB minimum.");
   if (!customerName)
-    warnings.push("Customer name is empty — generated artifacts will use the placeholder 'Customer'.");
+    warnings.push("Customer name is empty, generated artifacts will use the placeholder 'Customer'.");
 
   return { errors: errors, warnings: warnings };
 }
@@ -941,12 +941,12 @@ function gbom() {
   const packs10 = Math.ceil(totalTraffic / 10);
 
   const L = [];
-  L.push("# CloudLens sVM Sizing BOM — " + customerName);
+  L.push("# CloudLens sVM Sizing BOM, " + customerName);
   L.push("");
   L.push("> **⚠ ESTIMATED SIZING.** Verify with Keysight Professional Services before customer commit. Keysight does not publish official tiered sizing guidance; numbers below are inferred from public documentation and calibrated against a real-world 100 Gbps production reference deployment.");
   L.push("");
   L.push("> Generated by **CloudLens sVM Sizing Calculator v1.0** on " + ts);
-  L.push("> Prepared by Brine Ketum, Solutions Engineer — Keysight Technologies");
+  L.push("> Prepared by Brine Ketum, Solutions Engineer, Keysight Technologies");
   L.push("> Version stamp: CloudLens " + clRelease + " / KVO " + kvoVersion);
   L.push("");
   L.push("---");
@@ -975,7 +975,7 @@ function gbom() {
     L.push("> If your markdown viewer does not render inline SVG, view the live diagram in the [calculator](" + location.href + ").");
     L.push("");
   }
-  L.push("## 2. Sizing Decision — Per Site");
+  L.push("## 2. Sizing Decision, Per Site");
   L.push("");
   L.push("| Site | ESXi Hosts | Throughput | Per-Host | Tier | sVMs | vCPU/sVM | RAM/sVM | Monitored VMs |");
   L.push("|---|---|---|---|---|---|---|---|---|");
@@ -1023,7 +1023,7 @@ function gbom() {
   L.push("");
   L.push("> **Note:** Final pack mix depends on Keysight pricing quote. Option A is simpler; option B offers more granularity for phased rollouts.");
   L.push("");
-  L.push("## 5. Network Requirements — Per Site");
+  L.push("## 5. Network Requirements, Per Site");
   L.push("");
   sites.forEach(s => {
     L.push("### " + s.name);
@@ -1032,7 +1032,7 @@ function gbom() {
     L.push("- **Egress tunnel:** " + s.egressProtocol.toUpperCase());
     L.push("- **Tool destination:** " + s.toolDestination);
     L.push("- **Required vDS privileges:** Create/Delete/Modify dvPortGroups, VSPAN operations, Network assignment");
-    L.push("- **Port groups needed:** Separate Management PG + Egress PG (never share — congestion risk)");
+    L.push("- **Port groups needed:** Separate Management PG + Egress PG (never share, congestion risk)");
     L.push("- **Firewall:** L3 HTTPS from sVMs to CLM (" + s.clmPlacement + "), " + s.egressProtocol.toUpperCase() + " tunnels to tool destination");
     L.push("");
   });
@@ -1067,10 +1067,10 @@ function gbom() {
   L.push("");
   L.push("### Post-Deployment Validation (per SVM)");
   L.push("- [ ] Console login: admin / ixia (change default password immediately)");
-  L.push("- [ ] `show interface-status` — verify Network Adapter 1 (Mgmt) + Adapter 2 (Egress)");
-  L.push("- [ ] `show running-config` — verify CLM registration + mirror config");
-  L.push("- [ ] `show interface-pkt-counters` — confirm traffic flowing");
-  L.push("- [ ] `ping <CLM>` and `traceroute <tool-destination>` — confirm L3 paths");
+  L.push("- [ ] `show interface-status`, verify Network Adapter 1 (Mgmt) + Adapter 2 (Egress)");
+  L.push("- [ ] `show running-config`, verify CLM registration + mirror config");
+  L.push("- [ ] `show interface-pkt-counters`, confirm traffic flowing");
+  L.push("- [ ] `ping <CLM>` and `traceroute <tool-destination>`, confirm L3 paths");
   L.push("- [ ] Validate traffic arrives at packet broker / NPM tool");
   L.push("");
   L.push("### Anti-vMotion Pinning (CRITICAL)");
@@ -1158,7 +1158,7 @@ function generateCsv() {
     }
   });
   rows.push(["(license)","License","Throughput pack","-","-","-","-",totalTraffic.toFixed(1),Math.ceil(totalTraffic/100) + "x LIC-CL-VTAP-100 OR " + Math.ceil(totalTraffic/10) + "x LIC-CL-VTAP-10","Customer: " + customerName]);
-  rows.push(["(TOTAL)","Fleet","All components",totalVcpu,totalRam,totalDisk,totalSvms + " sVMs",totalTraffic.toFixed(1),"-","Estimated — verify with Keysight PS"]);
+  rows.push(["(TOTAL)","Fleet","All components",totalVcpu,totalRam,totalDisk,totalSvms + " sVMs",totalTraffic.toFixed(1),"-","Estimated, verify with Keysight PS"]);
 
   const csv = rows.map(r => r.map(c => {
     const s = String(c);
@@ -1241,7 +1241,7 @@ function serializeConfig() {
   CFG_KVO_FIELDS.forEach(id => { const el = $(id); if (el) data[id] = el.value; });
   /* sites is the source-of-truth array; serialize a deep copy */
   data.sites = sites.map(s => Object.assign({}, s));
-  /* tier overrides — full snapshot so reload reproduces exact behavior */
+  /* tier overrides, full snapshot so reload reproduces exact behavior */
   data.tiers = TIERS.map(t => Object.assign({}, t));
   return data;
 }
@@ -1332,14 +1332,14 @@ function shareConfigByURL() {
     const env = buildEnvelope();
     const cfg = b64urlEncode(JSON.stringify(env));
     const url = location.origin + location.pathname + "?cfg=" + cfg;
-    if (url.length > 8000) { showToast("Link is unusually long (" + url.length + " chars) — some email clients may truncate", "error"); }
+    if (url.length > 8000) { showToast("Link is unusually long (" + url.length + " chars), some email clients may truncate", "error"); }
     history.replaceState(null, "", "?cfg=" + cfg);
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(url).then(
         () => showToast("Shareable link copied to clipboard", "success"),
-        () => showToast("Link in address bar — copy manually", "success")
+        () => showToast("Link in address bar, copy manually", "success")
       );
-    } else { showToast("Link in address bar — copy manually", "success"); }
+    } else { showToast("Link in address bar, copy manually", "success"); }
   } catch (e) { showToast("Share failed: " + e.message, "error"); }
 }
 
@@ -1469,7 +1469,7 @@ function dgRenderSite(site, x, y, w, idx) {
   const chipLabel = siteName + " · " + (site.esxiHosts || 0) + " hosts · " + (site.throughput || 0) + " Gbps";
   parts.push(dgSubgraphChip({x: x + pad, y: y + pad, label: chipLabel, color: DG_COLOR.customer}));
 
-  /* Multi-row ESXi host grid — each host has a nested CloudLens sVM box */
+  /* Multi-row ESXi host grid, each host has a nested CloudLens sVM box */
   const hostsTopY = y + 50;
   let i = 0;
   for (let r = 0; r < layout.rows; r++) {
@@ -1593,7 +1593,7 @@ function renderDiagram() {
     }
   }
 
-  /* KVO — single box OR HA pair (Level 2 conditional shape variant) */
+  /* KVO, single box OR HA pair (Level 2 conditional shape variant) */
   const kvoH = 64;
   if (isHaPair) {
     /* Two KVO boxes side by side with a thin "HA sync" connector between them */

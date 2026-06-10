@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CloudLens VM Sensor Sizing Calculator — Keysight</title>
+<title>CloudLens VM Sensor Sizing Calculator, Keysight</title>
 <style>
   :root {
     --red: #E90029; --red-dark: #B80020; --dark: #1A1A1A; --gray: #666;
@@ -439,21 +439,21 @@
   <div class="grid">
     <div class="card results-card">
       <h2>Per-VM Sensor Footprint</h2>
-      <div class="metric"><span class="label">CPU Request</span><span class="value big" id="r_cpu_req">—</span></div>
-      <div class="metric"><span class="label">CPU Limit</span><span class="value" id="r_cpu_lim">—</span></div>
-      <div class="metric"><span class="label">Memory Request</span><span class="value big" id="r_mem_req">—</span></div>
-      <div class="metric"><span class="label">Memory Limit</span><span class="value" id="r_mem_lim">—</span></div>
-      <div class="metric"><span class="label">% of VM vCPU</span><span class="value" id="r_pct_cpu">—</span></div>
-      <div class="metric"><span class="label">% of VM Memory</span><span class="value" id="r_pct_mem">—</span></div>
+      <div class="metric"><span class="label">CPU Request</span><span class="value big" id="r_cpu_req">, </span></div>
+      <div class="metric"><span class="label">CPU Limit</span><span class="value" id="r_cpu_lim">, </span></div>
+      <div class="metric"><span class="label">Memory Request</span><span class="value big" id="r_mem_req">, </span></div>
+      <div class="metric"><span class="label">Memory Limit</span><span class="value" id="r_mem_lim">, </span></div>
+      <div class="metric"><span class="label">% of VM vCPU</span><span class="value" id="r_pct_cpu">, </span></div>
+      <div class="metric"><span class="label">% of VM Memory</span><span class="value" id="r_pct_mem">, </span></div>
     </div>
 
     <div class="card results-card">
       <h2>Fleet-Wide Totals</h2>
-      <div class="metric"><span class="label">Total Sensor CPU</span><span class="value big" id="c_cpu">—</span></div>
-      <div class="metric"><span class="label">Total Sensor Memory</span><span class="value big" id="c_mem">—</span></div>
-      <div class="metric"><span class="label">Total Mirrored Traffic</span><span class="value" id="c_traffic">—</span></div>
-      <div class="metric"><span class="label">Fleet Raw Resources</span><span class="value" id="c_fleet_total">—</span></div>
-      <div class="metric"><span class="label">Monitored VMs</span><span class="value" id="c_vm_count">—</span></div>
+      <div class="metric"><span class="label">Total Sensor CPU</span><span class="value big" id="c_cpu">, </span></div>
+      <div class="metric"><span class="label">Total Sensor Memory</span><span class="value big" id="c_mem">, </span></div>
+      <div class="metric"><span class="label">Total Mirrored Traffic</span><span class="value" id="c_traffic">, </span></div>
+      <div class="metric"><span class="label">Fleet Raw Resources</span><span class="value" id="c_fleet_total">, </span></div>
+      <div class="metric"><span class="label">Monitored VMs</span><span class="value" id="c_vm_count">, </span></div>
       <div class="verdict" id="verdict"><strong id="verdict_title"></strong><span id="verdict_text"></span></div>
     </div>
   </div>
@@ -674,13 +674,13 @@ function validate() {
   if (!mirrorIface) errors.push("Mirror interface cannot be empty.");
 
   if (Number.isFinite(vmVcpu) && vmVcpu < 2)
-    warnings.push("VM vCPU is below 2 — sensors require at least 1 dedicated CPU plus headroom.");
+    warnings.push("VM vCPU is below 2, sensors require at least 1 dedicated CPU plus headroom.");
   if (projectKey.indexOf("<PROJECT_KEY>") !== -1 || !projectKey)
-    warnings.push("Project Key still uses the placeholder — replace with the actual key from vController UI.");
+    warnings.push("Project Key still uses the placeholder, replace with the actual key from vController UI.");
   if (sensorServer === "vcontroller.example.com")
-    warnings.push("vController Host is still the example hostname — replace with your vController address.");
+    warnings.push("vController Host is still the example hostname, replace with your vController address.");
   if (repoUrl && !/^https?:\/\//.test(repoUrl))
-    warnings.push("Sensor repo URL does not start with http(s):// — install scripts may fail.");
+    warnings.push("Sensor repo URL does not start with http(s)://, install scripts may fail.");
   if (customTags && !/^[A-Za-z0-9_-]+=[^,]+(,[A-Za-z0-9_-]+=[^,]+)*$/.test(customTags))
     warnings.push("Custom tags should be comma-separated `key=value` pairs (e.g. `env=prod,tier=db`).");
 
@@ -1423,14 +1423,14 @@ function shareConfigByURL() {
     const env = buildEnvelope();
     const cfg = b64urlEncode(JSON.stringify(env));
     const url = location.origin + location.pathname + "?cfg=" + cfg;
-    if (url.length > 8000) { showToast("Link is unusually long (" + url.length + " chars) — some email clients may truncate", "error"); }
+    if (url.length > 8000) { showToast("Link is unusually long (" + url.length + " chars), some email clients may truncate", "error"); }
     history.replaceState(null, "", "?cfg=" + cfg);
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(url).then(
         () => showToast("Shareable link copied to clipboard", "success"),
-        () => showToast("Link in address bar — copy manually", "success")
+        () => showToast("Link in address bar, copy manually", "success")
       );
-    } else { showToast("Link in address bar — copy manually", "success"); }
+    } else { showToast("Link in address bar, copy manually", "success"); }
   } catch (e) { showToast("Share failed: " + e.message, "error"); }
 }
 
@@ -1530,7 +1530,7 @@ function dgOsLabel(family) {
   return ({rhel:"RHEL/CentOS",ubuntu:"Ubuntu/Debian",sles:"SLES",windows:"Windows Server",amazon:"Amazon Linux"}[family] || family);
 }
 
-/* === Reactive layout helpers (Level 1 — scale-aware count) ============= */
+/* === Reactive layout helpers (Level 1, scale-aware count) ============= */
 function dgScaledLayout(actual) {
   const a = Math.max(1, actual | 0);
   if (a <= 3)  return { shown: a, rows: 1, perRow: a, more: 0 };

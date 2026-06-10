@@ -826,7 +826,7 @@ function calculate() {
     licBody.appendChild(tr);
   }
   addLic("KVO perpetual", kvoCount, "One license per KVO instance.");
-  addLic("vPB Advanced", I.vpbEnabled ? vpbCount : "0", I.vpbEnabled ? "One per vPB. Enables filter, dedup, GREoUDP decap." : "Skipped — no vPB.");
+  addLic("vPB Advanced", I.vpbEnabled ? vpbCount : "0", I.vpbEnabled ? "One per vPB. Enables filter, dedup, GREoUDP decap." : "Skipped, no vPB.");
   addLic("CloudLens Enterprise", 1, "Account-wide. Covers all sensors regardless of count.");
   addLic("CloudLens Sensor count", fmt(sensorsProjected), "Per-sensor licensing applies. Confirm tier with Keysight Sales.");
   if (I.sslPayload) {
