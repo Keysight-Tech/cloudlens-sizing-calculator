@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>CloudLens KVO on AWS — EC2 Sizing Calculator — Keysight</title>
+<title>CloudLens CLMS + KVO + vPB on AWS — EC2 Sizing Calculator — Keysight</title>
 <link rel="stylesheet" href="../glass-upgrade.css" />
 <style>
   :root {
@@ -276,8 +276,8 @@
   </nav>
 
   <header>
-    <h1>CloudLens KVO on AWS &mdash; EC2 Sizing Calculator</h1>
-    <div class="subtitle">Marketplace AMI topology + monthly cost + multi-region federation &middot; v1.0</div>
+    <h1>CloudLens CLMS (vController) + KVO + vPB &mdash; AWS EC2 Sizing Calculator</h1>
+    <div class="subtitle">Full-stack AWS BOM: CLMS (vController) + KVO + vPB + Collector SVMs + Auto-Mirror Lambda &middot; Marketplace AMI topology + monthly cost + multi-region federation &middot; v1.0</div>
     <div class="actions">
       <button class="example-btn" id="loadExampleBtn" type="button">Load Example</button>
       <button class="secondary" id="saveBtn" type="button">💾 Save</button>
@@ -599,7 +599,7 @@
   </div>
 
   <footer class="calc-foot">
-    © Keysight Technologies &nbsp;|&nbsp; CloudLens KVO on AWS — EC2 Sizing Calculator v1.0 &nbsp;|&nbsp; Prepared by Brine Ketum, Solutions Engineer &nbsp;|&nbsp; Confidential &nbsp;|&nbsp; ⚠ Estimated sizing, verify with Keysight PS
+    © Keysight Technologies &nbsp;|&nbsp; CloudLens CLMS + KVO + vPB on AWS — EC2 Sizing Calculator v1.0 &nbsp;|&nbsp; Prepared by Brine Ketum, Solutions Engineer &nbsp;|&nbsp; Confidential &nbsp;|&nbsp; ⚠ Estimated sizing, verify with Keysight PS
   </footer>
 </div>
 
@@ -908,7 +908,7 @@ function generateBom(I, R) {
   var pricingLabel = I.pricingModel === "on-demand" ? "On-Demand" :
                      I.pricingModel === "ri-1yr"   ? "1-yr Reserved (37% discount)" :
                                                      "3-yr Reserved (60% discount)";
-  bom += "# CloudLens KVO on AWS — Bill of Materials\n\n";
+  bom += "# CloudLens CLMS + KVO + vPB on AWS — Bill of Materials\n\n";
   bom += "**Customer:** " + I.customerName + "  \n";
   bom += "**AWS Account:** " + I.awsAccountId + "  \n";
   bom += "**Target Deployment:** " + I.targetQuarter + "  \n";
@@ -1073,14 +1073,14 @@ $("copyBomBtn").addEventListener("click", function(){ copyText($("bomMarkdownOut
 $("downloadMdBtn").addEventListener("click", function(){
   var I = readInputs();
   var n = (I.customerName || "customer").replace(/[^a-zA-Z0-9]/g, "_");
-  download("CloudLens_KVO_AWS_BOM_" + n + ".md", $("bomMarkdownOut").textContent, "text/markdown");
+  download("CloudLens_AWS_BOM_" + n + ".md", $("bomMarkdownOut").textContent, "text/markdown");
 });
 $("printBomBtn").addEventListener("click", function(){ window.print(); });
 $("copyCsvBtn").addEventListener("click", function(){ copyText($("csvOut").textContent, "CSV copied"); });
 $("downloadCsvBtn").addEventListener("click", function(){
   var I = readInputs();
   var n = (I.customerName || "customer").replace(/[^a-zA-Z0-9]/g, "_");
-  download("CloudLens_KVO_AWS_BOM_" + n + ".csv", $("csvOut").textContent, "text/csv");
+  download("CloudLens_AWS_BOM_" + n + ".csv", $("csvOut").textContent, "text/csv");
 });
 
 // ---------- TOAST ----------
@@ -1118,7 +1118,7 @@ function applyConfig(env) {
 
 $("saveBtn").addEventListener("click", function() {
   var env = serializeConfig();
-  download("cloudlens_kvo_aws_config.json", JSON.stringify(env, null, 2), "application/json");
+  download("cloudlens_aws_config.json", JSON.stringify(env, null, 2), "application/json");
 });
 $("loadBtn").addEventListener("click", function() {
   var inp = document.createElement("input");
