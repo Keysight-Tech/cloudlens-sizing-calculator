@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>CloudLens CLMS + KVO + vPB on AWS — EC2 Sizing Calculator — Keysight</title>
+<title>CloudLens AWS EC2 Sizing Calculator | Keysight</title>
 <link rel="stylesheet" href="../glass-upgrade.css" />
 <style>
   :root {
@@ -276,8 +276,8 @@
   </nav>
 
   <header>
-    <h1>CloudLens CLMS (vController) + KVO + vPB &mdash; AWS EC2 Sizing Calculator</h1>
-    <div class="subtitle">Full-stack AWS BOM: CLMS (vController) + KVO + vPB + Collector SVMs + Auto-Mirror Lambda &middot; Marketplace AMI topology + monthly cost + multi-region federation &middot; v1.0</div>
+    <h1>CloudLens AWS EC2 Sizing Calculator</h1>
+    <div class="subtitle">Right-size your KVO, CLMS (vController), vPB, and Collector SVM deployment on AWS. Built for customers transitioning infrastructure to AWS who need cloud deployment sizing beyond the system requirements in the standard documentation.</div>
     <div class="actions">
       <button class="example-btn" id="loadExampleBtn" type="button">Load Example</button>
       <button class="secondary" id="saveBtn" type="button">💾 Save</button>
@@ -289,9 +289,28 @@
 
   <div class="estimate">
     <span class="warn-icon">⚠</span>
-    <div><strong>Estimated sizing.</strong>Numbers below come from public Keysight Marketplace AMI restrictions plus our live deployment on account 466778915280.</div>
-    <div><strong>Verify with Keysight PS</strong>before committing to a customer SOW.</div>
-    <div><strong>Marketplace AMI restrictions are HARD.</strong>KVO is locked to <code>c5.2xlarge</code>; vPB-KVO is locked to <code>t3.xlarge</code>. Scale horizontally.</div>
+    <div><strong>Estimated sizing.</strong>Numbers come from public Keysight Marketplace AMI restrictions and our live reference deployment.</div>
+    <div><strong>Verify with Keysight Professional Services</strong>before committing the sizing to a customer Statement of Work.</div>
+    <div><strong>Marketplace AMI instance types are fixed.</strong>KVO is locked to <code>c5.2xlarge</code>. vPB is locked to <code>t3.xlarge</code>. Scale by adding instances, not by resizing.</div>
+  </div>
+
+  <!-- Product Focus selector -->
+  <div class="card" id="focusCard" style="margin-bottom: 16px;">
+    <div class="card-head">
+      <h2>Which product do you want to size?</h2>
+      <span class="badge blue">FOCUS</span>
+    </div>
+    <p style="font-size: 14px; color: var(--gray); margin-bottom: 14px;">Pick a single product to see only its line items, license requirements, and Marketplace AMI detail. Or pick <strong>Full stack</strong> to size everything together for an end-to-end deployment.</p>
+    <div class="toggle-row" id="focusPills">
+      <button type="button" class="toggle-pill on" data-focus="all">Full stack</button>
+      <button type="button" class="toggle-pill" data-focus="kvo">KVO only</button>
+      <button type="button" class="toggle-pill" data-focus="clms">CLMS (vController) only</button>
+      <button type="button" class="toggle-pill" data-focus="vpb">vPB only</button>
+      <button type="button" class="toggle-pill" data-focus="collectors">Collector SVMs only</button>
+    </div>
+    <div id="focusDescription" class="callout" style="margin-top: 14px;">
+      <strong>Full stack:</strong> Sizes the complete CloudLens deployment for AWS. KVO orchestrates everything. CLMS manages sensors. vPB processes packet traffic. Collector SVMs handle AWS VPC Traffic Mirroring. Lambda auto-tags new EC2 instances.
+    </div>
   </div>
 
   <!-- 1. Customer Context -->
@@ -399,31 +418,31 @@
         <span class="badge dark">DATA PLANE</span>
       </div>
       <div class="field">
-        <label>Use vPB-KVO (Virtual Packet Broker)?</label>
+        <label>Use vPB (Virtual Packet Broker)?</label>
         <div class="toggle-row">
-          <button type="button" class="toggle-pill on" data-toggle="vpbEnabled" data-value="true">Yes — recommended</button>
-          <button type="button" class="toggle-pill" data-toggle="vpbEnabled" data-value="false">No — sensors direct to CLMS</button>
+          <button type="button" class="toggle-pill on" data-toggle="vpbEnabled" data-value="true">Yes, recommended</button>
+          <button type="button" class="toggle-pill" data-toggle="vpbEnabled" data-value="false">No, sensors direct to CLMS</button>
         </div>
       </div>
       <div class="field">
         <label>SSL Payload tapping?</label>
         <div class="toggle-row">
-          <button type="button" class="toggle-pill" data-toggle="sslPayload" data-value="true">Yes — decrypt at sensor</button>
-          <button type="button" class="toggle-pill on" data-toggle="sslPayload" data-value="false">No — encrypted traffic only</button>
+          <button type="button" class="toggle-pill" data-toggle="sslPayload" data-value="true">Yes, decrypt at sensor</button>
+          <button type="button" class="toggle-pill on" data-toggle="sslPayload" data-value="false">No, encrypted traffic only</button>
         </div>
       </div>
       <div class="field">
         <label>DTLS encryption (GREoUDP tunnel)?</label>
         <div class="toggle-row">
-          <button type="button" class="toggle-pill" data-toggle="dtlsEnabled" data-value="true">Yes — production hardening</button>
-          <button type="button" class="toggle-pill on" data-toggle="dtlsEnabled" data-value="false">No — plaintext tunnel</button>
+          <button type="button" class="toggle-pill" data-toggle="dtlsEnabled" data-value="true">Yes, production hardening</button>
+          <button type="button" class="toggle-pill on" data-toggle="dtlsEnabled" data-value="false">No, plaintext tunnel</button>
         </div>
       </div>
       <div class="field">
         <label>Auto-Mirror Lambda (EventBridge-driven tagging)?</label>
         <div class="toggle-row">
-          <button type="button" class="toggle-pill on" data-toggle="autoMirror" data-value="true">Yes — recommended</button>
-          <button type="button" class="toggle-pill" data-toggle="autoMirror" data-value="false">No — manual tagging</button>
+          <button type="button" class="toggle-pill on" data-toggle="autoMirror" data-value="true">Yes, recommended</button>
+          <button type="button" class="toggle-pill" data-toggle="autoMirror" data-value="false">No, manual tagging</button>
         </div>
       </div>
     </div>
@@ -436,7 +455,7 @@
       <div class="field">
         <label>Topology preference</label>
         <select id="topologyPref">
-          <option value="auto">Auto — recommend based on scale</option>
+          <option value="auto">Auto, recommend based on scale</option>
           <option value="single">Force single-KVO (one region acts as central)</option>
           <option value="federated">Force federated (one KVO per region)</option>
         </select>
@@ -455,7 +474,7 @@
           <option value="cis">CIS Level 1 (custom AMI)</option>
         </select>
       </div>
-      <div class="callout"><strong>KVO Marketplace AMI</strong> is hard-locked to <code>c5.2xlarge</code> (8 vCPU, 16 GiB RAM). For more capacity, scale horizontally (federate) — not vertically. Vertical scaling requires a custom Keysight build (engagement with PS).</div>
+      <div class="callout"><strong>KVO Marketplace AMI</strong> is hard-locked to <code>c5.2xlarge</code> (8 vCPU, 16 GiB RAM). For more capacity, scale horizontally (federate) instead of vertically. Vertical scaling requires a custom Keysight build (engagement with PS).</div>
     </div>
   </div>
 
@@ -553,7 +572,7 @@
       </thead>
       <tbody id="licenseBody"></tbody>
     </table>
-    <div class="callout">License costs are <strong>BYOL</strong> (Bring Your Own License). The AWS Marketplace AMIs do <em>not</em> include CloudLens licensing — those come from your Keysight order. Cost numbers on this page reflect <strong>AWS infrastructure only</strong>.</div>
+    <div class="callout">License costs are <strong>BYOL</strong> (Bring Your Own License). The AWS Marketplace AMIs do <em>not</em> include CloudLens licensing. Licenses come from your Keysight order. Cost numbers on this page reflect <strong>AWS infrastructure only</strong>.</div>
   </div>
 
   <!-- 7. Deployment time -->
@@ -599,7 +618,7 @@
   </div>
 
   <footer class="calc-foot">
-    © Keysight Technologies &nbsp;|&nbsp; CloudLens CLMS + KVO + vPB on AWS — EC2 Sizing Calculator v1.0 &nbsp;|&nbsp; Prepared by Brine Ketum, Solutions Engineer &nbsp;|&nbsp; Confidential &nbsp;|&nbsp; ⚠ Estimated sizing, verify with Keysight PS
+    © Keysight Technologies &nbsp;|&nbsp; CloudLens AWS EC2 Sizing Calculator v1.0 &nbsp;|&nbsp; Prepared by Brine Ketum, Solutions Engineer &nbsp;|&nbsp; Confidential &nbsp;|&nbsp; ⚠ Estimated sizing, verify with Keysight PS
   </footer>
 </div>
 
@@ -607,7 +626,7 @@
 
 <script>
 // ============================================================================
-//   CloudLens KVO on AWS — EC2 Sizing Calculator
+//   CloudLens AWS EC2 Sizing Calculator
 //   v1.0  ·  2026-06-09
 // ============================================================================
 
@@ -618,7 +637,7 @@ function money(n) { return Number(n).toLocaleString("en-US", { maximumFractionDi
 
 // ---------- AWS PRICING TABLE (us-east-1 on-demand, monthly @ 730 hrs) ----------
 var AWS_PRICING = {
-  // EC2 hourly (on-demand) — multiplied by 730 hrs for monthly
+  // EC2 hourly (on-demand), multiplied by 730 hrs for monthly
   "c5.2xlarge":  { hourly: 0.34,  monthly: 248.20 },
   "t3.xlarge":   { hourly: 0.1664, monthly: 121.47 },
   "t3.medium":   { hourly: 0.0416, monthly: 30.37 },
@@ -626,7 +645,7 @@ var AWS_PRICING = {
   // Storage (GP3, $0.08/GB-month)
   "ebs-200gb":   { hourly: 0,     monthly: 16.00 },
   "ebs-100gb":   { hourly: 0,     monthly: 8.00 },
-  // Lambda + EventBridge — essentially $0 at moderate scale
+  // Lambda + EventBridge, essentially $0 at moderate scale
   "lambda-mirror": { hourly: 0, monthly: 0.5 },
   // Bandwidth: $0.09/GB egress (only counted when SVMs egress to non-VPC tools)
   "bandwidth-per-gb": 0.09
@@ -751,10 +770,10 @@ function calculate() {
       (I.vpbEnabled ? vpbCount + " vPB(s), " : "no vPB, ") +
       totalCollectors + " collector SVMs auto-deployed by KVO Zone Tapping.";
   } else {
-    strategy = "Federated topology — " + kvoCount + " KVO(s) across " + I.regionCount + " region(s) " +
+    strategy = "Federated topology: " + kvoCount + " KVO(s) across " + I.regionCount + " region(s) " +
       "(reason: " + (sensorsProjected > SINGLE_KVO_LIMIT ? "exceeds single-KVO 5,000-sensor recommendation" : "multi-region footprint") + "). " +
       "Each region runs an independent KVO + CLMS" + (I.vpbEnabled ? " + vPB" : "") + ". " +
-      "Federation requires cross-region admin coordination — engage Keysight PS for the federation playbook.";
+      "Federation requires cross-region admin coordination. Engage Keysight Professional Services for the federation playbook.";
   }
   setText("rec_strategy", strategy);
 
@@ -769,21 +788,31 @@ function calculate() {
     bomBody.appendChild(tr);
   }
   var kvoPerRegion = topology === "single" ? (I.redundancy === "active-standby" ? 2 : (I.regionCount === 1 ? kvoCount : 0)) : (I.redundancy === "active-standby" ? 2 : 1);
-  if (topology === "single" && I.regionCount > 1) kvoPerRegion = "—";
-  addRow("KVO (master orchestrator)", "c5.2xlarge", kvoPerRegion, kvoCount, AWS_PRICING["c5.2xlarge"].monthly * discount + AWS_PRICING["ebs-200gb"].monthly, costKvo);
-  addRow("CLMS (sensor manager)", "t3.xlarge", clmsCount / I.regionCount, clmsCount, AWS_PRICING["t3.xlarge"].monthly * discount + AWS_PRICING["ebs-100gb"].monthly, costClms);
-  if (I.vpbEnabled) {
-    addRow("vPB-KVO (packet broker)", "t3.xlarge", vpbCount / I.regionCount, vpbCount, AWS_PRICING["t3.xlarge"].monthly * discount + AWS_PRICING["ebs-100gb"].monthly, costVpb);
+  if (topology === "single" && I.regionCount > 1) kvoPerRegion = "n/a";
+  if (isRowVisible("kvo"))        addRow("KVO (master orchestrator)", "c5.2xlarge", kvoPerRegion, kvoCount, AWS_PRICING["c5.2xlarge"].monthly * discount + AWS_PRICING["ebs-200gb"].monthly, costKvo);
+  if (isRowVisible("clms"))       addRow("CLMS (vController)", "t3.xlarge", clmsCount / I.regionCount, clmsCount, AWS_PRICING["t3.xlarge"].monthly * discount + AWS_PRICING["ebs-100gb"].monthly, costClms);
+  if (isRowVisible("vpb") && I.vpbEnabled) {
+    addRow("vPB (Virtual Packet Broker)", "t3.xlarge", vpbCount / I.regionCount, vpbCount, AWS_PRICING["t3.xlarge"].monthly * discount + AWS_PRICING["ebs-100gb"].monthly, costVpb);
   }
-  addRow("Collector SVM (auto)", "c5.2xlarge", collectorsPerRegion, totalCollectors, AWS_PRICING["c5.2xlarge"].monthly * discount + AWS_PRICING["ebs-200gb"].monthly, costCollectors);
-  if (I.autoMirror) {
-    addRow("Auto-Mirror Lambda + EventBridge", "Lambda (python3.12)", "1", lambdaCount, AWS_PRICING["lambda-mirror"].monthly, costLambda);
+  if (isRowVisible("collectors")) addRow("Collector SVM (auto-deployed)", "c5.2xlarge", collectorsPerRegion, totalCollectors, AWS_PRICING["c5.2xlarge"].monthly * discount + AWS_PRICING["ebs-200gb"].monthly, costCollectors);
+  if (isRowVisible("lambda") && I.autoMirror) {
+    addRow("Auto-Mirror Lambda and EventBridge", "Lambda (python3.12)", "1", lambdaCount, AWS_PRICING["lambda-mirror"].monthly, costLambda);
   }
-  addRow("Data Egress (estimated)", "10% of capture", "—", bandwidthGB + " GB", AWS_PRICING["bandwidth-per-gb"], costBandwidth);
+  if (isRowVisible("bandwidth")) addRow("Data egress (estimated)", "10% of capture", "n/a", bandwidthGB + " GB", AWS_PRICING["bandwidth-per-gb"], costBandwidth);
+  // Filtered total reflects only the visible rows
+  var visibleTotal = 0;
+  if (isRowVisible("kvo"))        visibleTotal += costKvo;
+  if (isRowVisible("clms"))       visibleTotal += costClms;
+  if (isRowVisible("vpb") && I.vpbEnabled) visibleTotal += costVpb;
+  if (isRowVisible("collectors")) visibleTotal += costCollectors;
+  if (isRowVisible("lambda") && I.autoMirror) visibleTotal += costLambda;
+  if (isRowVisible("bandwidth")) visibleTotal += costBandwidth;
   var trTotal = document.createElement("tr");
   trTotal.className = "total";
-  trTotal.innerHTML = "<td colspan='5'>Monthly AWS infrastructure cost</td><td class='num'>$" + money(costTotal) + "</td>";
+  trTotal.innerHTML = "<td colspan='5'>Monthly AWS infrastructure cost" + (focusMode !== "all" ? " (" + focusMode.toUpperCase() + " only)" : "") + "</td><td class='num'>$" + money(visibleTotal) + "</td>";
   bomBody.appendChild(trTotal);
+  // Also update the headline cost card to reflect the focused total
+  setText("rec_monthly_cost", money(visibleTotal));
 
   // ---------- TOPOLOGY DIAGRAM ----------
   renderTopology(I, topology, kvoCount, clmsCount, vpbCount, totalCollectors);
@@ -797,7 +826,7 @@ function calculate() {
     licBody.appendChild(tr);
   }
   addLic("KVO perpetual", kvoCount, "One license per KVO instance.");
-  addLic("vPB Advanced", I.vpbEnabled ? vpbCount : "0", I.vpbEnabled ? "One per vPB-KVO. Enables filter, dedup, GREoUDP decap." : "Skipped — no vPB.");
+  addLic("vPB Advanced", I.vpbEnabled ? vpbCount : "0", I.vpbEnabled ? "One per vPB. Enables filter, dedup, GREoUDP decap." : "Skipped — no vPB.");
   addLic("CloudLens Enterprise", 1, "Account-wide. Covers all sensors regardless of count.");
   addLic("CloudLens Sensor count", fmt(sensorsProjected), "Per-sensor licensing applies. Confirm tier with Keysight Sales.");
   if (I.sslPayload) {
@@ -895,7 +924,7 @@ function renderTopology(I, topology, kvoCount, clmsCount, vpbCount, totalCollect
     lines.push("│  ... + " + (I.regionCount - 3) + " more region(s) with the same pattern              │");
     }
     lines.push("│                                                                 │");
-    lines.push("│  ⓘ  Federation requires cross-region admin coordination —       │");
+    lines.push("│  ⓘ  Federation requires admin coordination across regions.   │");
     lines.push("│      engage Keysight PS for the federation playbook.            │");
     lines.push("└─────────────────────────────────────────────────────────────────┘");
   }
@@ -908,7 +937,7 @@ function generateBom(I, R) {
   var pricingLabel = I.pricingModel === "on-demand" ? "On-Demand" :
                      I.pricingModel === "ri-1yr"   ? "1-yr Reserved (37% discount)" :
                                                      "3-yr Reserved (60% discount)";
-  bom += "# CloudLens CLMS + KVO + vPB on AWS — Bill of Materials\n\n";
+  bom += "# CloudLens AWS Deployment Bill of Materials\n\n";
   bom += "**Customer:** " + I.customerName + "  \n";
   bom += "**AWS Account:** " + I.awsAccountId + "  \n";
   bom += "**Target Deployment:** " + I.targetQuarter + "  \n";
@@ -933,13 +962,13 @@ function generateBom(I, R) {
   bom += "| KVO (master orchestrator) | `c5.2xlarge` | " + (R.topology === "single" ? (I.regionCount === 1 ? R.kvoCount : "primary only") : Math.ceil(R.kvoCount/I.regionCount)) + " | " + R.kvoCount + " | $" + money(AWS_PRICING["c5.2xlarge"].monthly * (DISCOUNT[I.pricingModel] || 1) + AWS_PRICING["ebs-200gb"].monthly) + " | $" + money(R.costKvo) + " |\n";
   bom += "| CLMS (sensor manager) | `t3.xlarge` | " + Math.ceil(R.clmsCount/I.regionCount) + " | " + R.clmsCount + " | $" + money(AWS_PRICING["t3.xlarge"].monthly * (DISCOUNT[I.pricingModel] || 1) + AWS_PRICING["ebs-100gb"].monthly) + " | $" + money(R.costClms) + " |\n";
   if (I.vpbEnabled) {
-    bom += "| vPB-KVO (packet broker) | `t3.xlarge` | " + Math.ceil(R.vpbCount/I.regionCount) + " | " + R.vpbCount + " | $" + money(AWS_PRICING["t3.xlarge"].monthly * (DISCOUNT[I.pricingModel] || 1) + AWS_PRICING["ebs-100gb"].monthly) + " | $" + money(R.costVpb) + " |\n";
+    bom += "| vPB (packet broker) | `t3.xlarge` | " + Math.ceil(R.vpbCount/I.regionCount) + " | " + R.vpbCount + " | $" + money(AWS_PRICING["t3.xlarge"].monthly * (DISCOUNT[I.pricingModel] || 1) + AWS_PRICING["ebs-100gb"].monthly) + " | $" + money(R.costVpb) + " |\n";
   }
   bom += "| Collector SVM (auto-deployed) | `c5.2xlarge` | " + R.collectorsPerRegion + " | " + R.totalCollectors + " | $" + money(AWS_PRICING["c5.2xlarge"].monthly * (DISCOUNT[I.pricingModel] || 1) + AWS_PRICING["ebs-200gb"].monthly) + " | $" + money(R.costCollectors) + " |\n";
   if (I.autoMirror) {
     bom += "| Auto-Mirror Lambda + EventBridge | Lambda python3.12 | 1 | " + I.regionCount + " | $1 | $" + money(R.costLambda) + " |\n";
   }
-  bom += "| Data egress (10% of capture) | — | — | — | $0.09/GB | $" + money(R.costBandwidth) + " |\n";
+  bom += "| Data egress (10% of capture) | n/a | n/a | n/a | $0.09/GB | $" + money(R.costBandwidth) + " |\n";
   bom += "| **AWS infrastructure total** | | | | | **$" + money(R.costTotal) + "** |\n\n";
 
   bom += "---\n\n";
@@ -948,17 +977,17 @@ function generateBom(I, R) {
   bom += "|---|---|---|---|\n";
   bom += "| KVO | `ami-017c0db8981569380` | `c5.2xlarge` **only** | AWS Marketplace |\n";
   bom += "| CLMS (vController) | `ami-0bebd5e730315337e` | `t3.xlarge` recommended | AWS Marketplace |\n";
-  bom += "| vPB-KVO | `ami-0a561b450552b707d` | `t3.xlarge` **only** | AWS Marketplace |\n";
+  bom += "| vPB | `ami-0a561b450552b707d` | `t3.xlarge` **only** | AWS Marketplace |\n";
   bom += "| Collector SVM (v6.13.0) | `ami-0c22ade3667f8d35a` | auto-sized | Deployed by KVO Zone Tapping |\n\n";
 
-  bom += "> ⚠ KVO and vPB-KVO Marketplace AMIs are **hard-locked** to specific instance types. Vertical scaling above these requires a custom Keysight build (engage PS). All scaling beyond Marketplace caps is horizontal (federation).\n\n";
+  bom += "> ⚠ KVO and vPB Marketplace AMIs are **hard-locked** to specific instance types. Vertical scaling above these requires a custom Keysight build (engage PS). All scaling beyond Marketplace caps is horizontal (federation).\n\n";
 
   bom += "---\n\n";
   bom += "## License Math (BYOL)\n\n";
   bom += "| License Component | Required | Notes |\n";
   bom += "|---|---|---|\n";
   bom += "| KVO perpetual | " + R.kvoCount + " | One license per KVO instance. |\n";
-  bom += "| vPB Advanced | " + (I.vpbEnabled ? R.vpbCount : "0 (skipped)") + " | One per vPB-KVO. |\n";
+  bom += "| vPB Advanced | " + (I.vpbEnabled ? R.vpbCount : "0 (skipped)") + " | One per vPB. |\n";
   bom += "| CloudLens Enterprise | 1 | Account-wide. |\n";
   bom += "| CloudLens Sensor count | " + fmt(R.sensorsProjected) + " | Per-sensor licensing applies. |\n";
   if (I.sslPayload) {
@@ -968,7 +997,7 @@ function generateBom(I, R) {
 
   bom += "---\n\n";
   bom += "## Deployment Checklist\n\n";
-  bom += "- [ ] Subscribe to all 3 Keysight Marketplace AMIs (once per AWS account) — KVO, CLMS, vPB-KVO\n";
+  bom += "- [ ] Subscribe to all 3 Keysight Marketplace AMIs in the target AWS account: KVO, CLMS, vPB\n";
   bom += "- [ ] Pre-create EC2 key pair in target region(s)\n";
   bom += "- [ ] Tag every target EC2 instance: `cloudlens=true` + `Platform=linux-docker|linux-podman|windows`\n";
   bom += "- [ ] Confirm IAM permissions to create CFN/Terraform stack with `CAPABILITY_NAMED_IAM`\n";
@@ -992,7 +1021,7 @@ function generateBom(I, R) {
   bom += "- **Scaling guidance:** https://github.com/Keysight-Tech/cloudlens-autopilot-docs/blob/main/SCALING.md\n";
   bom += "- **Customer runbook (DOCX):** https://github.com/Keysight-Tech/cloudlens-autopilot-docs/raw/main/CloudLens-AutoPilot-Deployment-Runbook.docx\n\n";
 
-  bom += "*Generated by CloudLens KVO on AWS Sizing Calculator v1.0 — Prepared by Brine Ketum, Solutions Engineer.*\n";
+  bom += "*Generated by CloudLens AWS EC2 Sizing Calculator v1.0. Prepared by Brine Ketum, Solutions Engineer.*\n";
   bom += "*⚠ Estimated sizing. Verify with Keysight Professional Services before committing to a customer SOW.*\n";
   return bom;
 }
@@ -1009,7 +1038,7 @@ function generateCsv(I, R) {
       "", ""]);
     rows.push([I.customerName, I.awsAccountId, regLabel, "CLMS", "t3.xlarge", Math.ceil(R.clmsCount/I.regionCount), "", ""]);
     if (I.vpbEnabled) {
-      rows.push([I.customerName, I.awsAccountId, regLabel, "vPB-KVO", "t3.xlarge", Math.ceil(R.vpbCount/I.regionCount), "", ""]);
+      rows.push([I.customerName, I.awsAccountId, regLabel, "vPB", "t3.xlarge", Math.ceil(R.vpbCount/I.regionCount), "", ""]);
     }
     rows.push([I.customerName, I.awsAccountId, regLabel, "Collector SVM (auto)", "c5.2xlarge", R.collectorsPerRegion, "", ""]);
     if (I.autoMirror) {
@@ -1023,6 +1052,46 @@ function generateCsv(I, R) {
       return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
     }).join(",");
   }).join("\n");
+}
+
+
+// ---------- PRODUCT FOCUS LOGIC ----------
+var focusMode = "all";  // all | kvo | clms | vpb | collectors
+
+var FOCUS_DESCRIPTIONS = {
+  all:        '<strong>Full stack:</strong> Sizes the complete CloudLens deployment for AWS. KVO orchestrates everything. CLMS manages sensors. vPB processes packet traffic. Collector SVMs handle AWS VPC Traffic Mirroring. Lambda auto-tags new EC2 instances. Best when planning a fresh deployment or budgeting end to end.',
+  kvo:        '<strong>KVO (Keysight Vision Orchestrator):</strong> The master orchestrator. Marketplace AMI <code>ami-017c0db8981569380</code> locked to <code>c5.2xlarge</code> (8 vCPU, 16 GiB RAM). A single KVO supports up to about 5,000 sensors. Beyond that, federate across regions. Use this focus when right-sizing just the KVO tier or planning federation count.',
+  clms:       '<strong>CLMS (vController):</strong> The sensor manager. Marketplace AMI <code>ami-0bebd5e730315337e</code> on <code>t3.xlarge</code>. One CLMS per region (double when running active and standby). CLMS is adopted by KVO via private IP and provides the project key for sensor registration. Use this focus when sizing only the sensor management tier.',
+  vpb:        '<strong>vPB (Virtual Packet Broker):</strong> The packet processing tier. Marketplace AMI <code>ami-0a561b450552b707d</code> locked to <code>t3.xlarge</code>. Handles filter, dedup, GREoUDP decap, and SSL Payload reception. SSH on port 9022 (not 22). Use this focus when planning the data plane only, or when deciding whether to deploy vPB at all.',
+  collectors: '<strong>Collector SVMs (Service VMs):</strong> Auto-deployed by KVO Zone Tapping when you create an AWS Cloud Config. Marketplace AMI <code>ami-0c22ade3667f8d35a</code> (v6.13.0). These receive AWS VPC Traffic Mirror sessions and forward to vPB or directly to CLMS. Sized at one collector per 250 monitored sensors per region, capped at 10 per region. Use this focus when planning mirror collection capacity.'
+};
+
+// Maps focus mode to BOM row keys that should be visible
+var FOCUS_BOM_ROWS = {
+  all:        ["kvo", "clms", "vpb", "collectors", "lambda", "bandwidth"],
+  kvo:        ["kvo"],
+  clms:       ["clms"],
+  vpb:        ["vpb"],
+  collectors: ["collectors", "bandwidth"]
+};
+
+function setFocus(mode) {
+  focusMode = mode;
+  document.querySelectorAll('[data-focus]').forEach(function(b) {
+    b.classList.toggle("on", b.getAttribute("data-focus") === mode);
+  });
+  var desc = document.getElementById("focusDescription");
+  if (desc) desc.innerHTML = FOCUS_DESCRIPTIONS[mode] || FOCUS_DESCRIPTIONS.all;
+  calculate();
+}
+
+document.querySelectorAll('[data-focus]').forEach(function(b) {
+  b.addEventListener("click", function(){ setFocus(b.getAttribute("data-focus")); });
+});
+
+// ---------- FOCUS-AWARE BOM FILTERING ----------
+function isRowVisible(rowKey) {
+  return FOCUS_BOM_ROWS[focusMode].indexOf(rowKey) !== -1;
 }
 
 // ---------- TOGGLE PILL HANDLERS ----------
