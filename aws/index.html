@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>CloudLens KVO on AWS — EC2 Sizing Calculator — Keysight</title>
+<link rel="stylesheet" href="../glass-upgrade.css" />
+<style>
+  :root {
+    --red: #E90029;
+    --red-dark: #B80020;
+    --dark: #1A1A1A;
+    --gray: #666;
+    --light-gray: #F5F5F5;
+    --border: #E0E0E0;
+    --green: #27AE60;
+    --amber: #F39C12;
+    --blue: #2563EB;
+    --white: #FFFFFF;
+    --gold: #D4AF37;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Arial, sans-serif;
+    background: #FAFAFA;
+    color: var(--dark);
+    line-height: 1.6;
+    padding: 24px;
+  }
+  .container { max-width: 1280px; margin: 0 auto; }
+
+  header {
+    background: linear-gradient(90deg, var(--red), var(--red-dark));
+    color: white;
+    padding: 28px 36px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    box-shadow: 0 6px 18px rgba(233,0,41,0.25);
+  }
+  header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
+  header .subtitle { font-size: 14px; opacity: .9; margin-top: 6px; }
+  header .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+  header .actions button {
+    background: white; color: var(--red); padding: 10px 16px;
+    border: none; border-radius: 999px; font-weight: 600; font-size: 14px;
+    cursor: pointer; transition: all .2s;
+  }
+  header .actions button:hover { background: #FFEEF1; }
+  header .actions button.secondary { background: rgba(255,255,255,0.15); color: white; }
+  header .actions button.secondary:hover { background: rgba(255,255,255,0.25); }
+
+  /* Top nav pills */
+  .calc-switcher {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    background: var(--dark); color: white;
+    padding: 12px 18px; border-radius: 12px; margin-bottom: 16px;
+    font-size: 14px;
+  }
+  .calc-switcher .label-pill {
+    background: white; color: var(--dark);
+    padding: 6px 12px; border-radius: 999px; font-weight: 700; font-size: 12px;
+    letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .calc-switcher .product-name { font-weight: 600; margin-right: auto; }
+  .calc-switcher a {
+    color: rgba(255,255,255,0.85); text-decoration: none;
+    padding: 6px 12px; border-radius: 999px; transition: all .2s;
+  }
+  .calc-switcher a:hover { background: rgba(255,255,255,0.1); color: white; }
+  .calc-switcher a.active { background: var(--red); color: white; }
+
+  /* Estimate banner */
+  .estimate {
+    background: #FFFBEA; border-left: 4px solid var(--amber);
+    padding: 14px 18px; border-radius: 8px; margin-bottom: 24px;
+    display: grid; grid-template-columns: auto 1fr 1fr 1fr; gap: 18px;
+    font-size: 14px; color: var(--dark);
+  }
+  .estimate .warn-icon { color: var(--amber); font-weight: 700; }
+  .estimate strong { display: block; margin-bottom: 4px; }
+
+  /* Cards */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-1 { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+  .card {
+    background: white;
+    border-radius: 12px;
+    padding: 22px 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+  }
+  .card-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+  .card-head h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+  .badge {
+    background: var(--red); color: white; padding: 4px 10px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  }
+  .badge.blue { background: var(--blue); }
+  .badge.green { background: var(--green); }
+  .badge.gold { background: var(--gold); color: var(--dark); }
+  .badge.dark { background: var(--dark); }
+
+  /* Form fields */
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block; font-size: 13px; font-weight: 600; color: var(--dark);
+    margin-bottom: 6px;
+  }
+  .field label .hint { font-weight: 400; color: var(--gray); margin-left: 8px; font-size: 12px; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 14px; font-family: inherit;
+    background: #FAFAFA;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: none; border-color: var(--red); background: white;
+    box-shadow: 0 0 0 3px rgba(233,0,41,0.10);
+  }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+  /* Range slider with readout */
+  .slider-wrap { display: flex; gap: 12px; align-items: center; }
+  .slider-wrap input[type="range"] { flex: 1; }
+  .slider-wrap .readout {
+    min-width: 84px; text-align: right; font-weight: 700; font-size: 15px;
+    color: var(--red);
+  }
+
+  /* Toggle pills */
+  .toggle-row {
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .toggle-pill {
+    padding: 8px 14px; border: 1px solid var(--border);
+    border-radius: 999px; background: #FAFAFA; cursor: pointer;
+    font-size: 13px; font-weight: 600; transition: all .2s;
+  }
+  .toggle-pill.on {
+    background: var(--red); color: white; border-color: var(--red);
+    box-shadow: 0 3px 10px rgba(233,0,41,0.30);
+  }
+
+  /* Info callout */
+  .callout {
+    background: #EEF4FF; border-left: 4px solid var(--blue);
+    padding: 12px 16px; border-radius: 8px; font-size: 13.5px;
+    margin-top: 12px; color: #1E3A8A;
+  }
+  .callout strong { color: var(--blue); }
+
+  .callout.warn { background: #FFFBEA; border-color: var(--amber); color: #92400E; }
+  .callout.warn strong { color: #92400E; }
+  .callout.success { background: #ECFDF5; border-color: var(--green); color: #065F46; }
+  .callout.success strong { color: #065F46; }
+
+  /* Output tables */
+  table {
+    width: 100%; border-collapse: separate; border-spacing: 0;
+    font-size: 14px; margin-top: 4px;
+  }
+  table thead {
+    background: linear-gradient(180deg, #FAFAFA, #F1F3F5);
+  }
+  table th {
+    text-align: left; padding: 10px 12px; font-weight: 700;
+    border-bottom: 2px solid var(--border); font-size: 12.5px;
+    letter-spacing: 0.04em; text-transform: uppercase; color: var(--dark);
+  }
+  table td {
+    padding: 11px 12px; border-bottom: 1px solid var(--border); color: var(--dark);
+  }
+  table tr:last-child td { border-bottom: none; }
+  table tr.total td {
+    background: #FAFAFA; font-weight: 700;
+    border-top: 2px solid var(--dark);
+  }
+  table .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  code, .mono {
+    font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: 13px; background: #F1F3F5; padding: 2px 6px; border-radius: 4px;
+    color: var(--red-dark);
+  }
+
+  /* Output BOM block */
+  .bom-output {
+    background: #0F1419; color: #E2E8F0; padding: 20px 24px;
+    border-radius: 12px; font-family: "SF Mono", Menlo, monospace; font-size: 13px;
+    line-height: 1.65; max-height: 480px; overflow-y: auto; overflow-x: auto;
+    white-space: pre; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.3);
+  }
+  .copy-btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .copy-btn-row button {
+    padding: 10px 18px; border: 1px solid var(--border); background: white;
+    border-radius: 999px; cursor: pointer; font-weight: 600; font-size: 13px;
+    transition: all .2s;
+  }
+  .copy-btn-row button.primary { background: var(--red); color: white; border-color: var(--red); }
+  .copy-btn-row button.primary:hover { background: var(--red-dark); }
+  .copy-btn-row button:hover { background: #FAFAFA; }
+
+  /* Big result number */
+  .big-num {
+    font-size: 36px; font-weight: 800; letter-spacing: -0.02em;
+    color: var(--red); font-variant-numeric: tabular-nums; line-height: 1.1;
+  }
+  .big-num small { font-size: 14px; font-weight: 600; color: var(--gray); display: block; margin-top: 4px; letter-spacing: 0.04em; text-transform: uppercase; }
+
+  .summary-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;
+    margin-bottom: 16px;
+  }
+  .summary-cell {
+    background: white; border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px;
+  }
+  .summary-cell .label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+    color: var(--gray); text-transform: uppercase; margin-bottom: 6px;
+  }
+  .summary-cell .value {
+    font-size: 22px; font-weight: 800; color: var(--dark);
+  }
+  .summary-cell .sub { font-size: 12px; color: var(--gray); margin-top: 4px; }
+  .summary-cell.accent .value { color: var(--red); }
+
+  /* Topology diagram (text-based) */
+  .topology {
+    background: #FAFAFA; border-radius: 10px; padding: 18px;
+    font-family: "SF Mono", Menlo, monospace; font-size: 12.5px;
+    line-height: 1.55; white-space: pre; overflow-x: auto; color: var(--dark);
+  }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--dark); color: white; padding: 12px 20px;
+    border-radius: 999px; font-size: 14px; font-weight: 600;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.3); opacity: 0; pointer-events: none;
+    transition: all .3s; z-index: 9999;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+
+  /* Footer note */
+  footer.calc-foot {
+    text-align: center; padding: 28px 24px; margin-top: 32px;
+    color: rgba(255,255,255,0.65); font-size: 12px;
+    background: var(--dark); border-radius: 16px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Full-width Keysight banner -->
+<a href="https://www.keysight.com" target="_blank" rel="noopener" class="ks-top-banner" aria-label="Keysight Technologies">
+  KEYSIGHT TECHNOLOGIES
+</a>
+<button type="button" class="theme-toggle-fab" id="ks-theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">🌙</button>
+
+<div class="container">
+
+  <!-- Cross-calc nav -->
+  <nav class="calc-switcher">
+    <span class="label-pill">KEYSIGHT</span>
+    <span class="product-name">CloudLens Sizing Suite</span>
+    <a href="../">K8s / OpenShift</a>
+    <a href="../vm/">VM Sensor</a>
+    <a href="../svm/">sVM (VMware)</a>
+    <a href="./" class="active">AWS EC2</a>
+  </nav>
+
+  <header>
+    <h1>CloudLens KVO on AWS &mdash; EC2 Sizing Calculator</h1>
+    <div class="subtitle">Marketplace AMI topology + monthly cost + multi-region federation &middot; v1.0</div>
+    <div class="actions">
+      <button class="example-btn" id="loadExampleBtn" type="button">Load Example</button>
+      <button class="secondary" id="saveBtn" type="button">💾 Save</button>
+      <button class="secondary" id="loadBtn" type="button">📂 Load</button>
+      <button class="secondary" id="shareBtn" type="button">🔗 Share</button>
+      <button class="secondary" id="resetBtn" type="button">Reset</button>
+    </div>
+  </header>
+
+  <div class="estimate">
+    <span class="warn-icon">⚠</span>
+    <div><strong>Estimated sizing.</strong>Numbers below come from public Keysight Marketplace AMI restrictions plus our live deployment on account 466778915280.</div>
+    <div><strong>Verify with Keysight PS</strong>before committing to a customer SOW.</div>
+    <div><strong>Marketplace AMI restrictions are HARD.</strong>KVO is locked to <code>c5.2xlarge</code>; vPB-KVO is locked to <code>t3.xlarge</code>. Scale horizontally.</div>
+  </div>
+
+  <!-- 1. Customer Context -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-head">
+        <h2>Customer Context</h2>
+        <span class="badge gold">GLOBAL</span>
+      </div>
+      <div class="field">
+        <label>Customer Name <span class="hint">Appears on BOM header</span></label>
+        <input type="text" id="customerName" value="Example Customer" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>AWS Account ID</label>
+          <input type="text" id="awsAccountId" value="123456789012" />
+        </div>
+        <div class="field">
+          <label>Deployment Target Quarter</label>
+          <input type="text" id="targetQuarter" value="Q3 2026" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>CloudLens Release</label>
+          <input type="text" id="cloudlensRelease" value="6.14.0" />
+        </div>
+        <div class="field">
+          <label>KVO Version</label>
+          <input type="text" id="kvoVersion" value="1.12.1" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Pricing Model</label>
+        <select id="pricingModel">
+          <option value="on-demand">On-Demand (us-east-1 list price)</option>
+          <option value="ri-1yr">Reserved 1-yr Standard (~37% off)</option>
+          <option value="ri-3yr">Reserved 3-yr Standard (~60% off)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Fleet Profile</h2>
+        <span class="badge blue">INPUTS</span>
+      </div>
+      <div class="field">
+        <label>Total monitored EC2 sensors <span class="hint">across all regions</span></label>
+        <div class="slider-wrap">
+          <input type="range" id="totalSensors" min="50" max="20000" step="50" value="500" />
+          <div class="readout"><span id="totalSensors_out">500</span></div>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Regions</label>
+          <input type="number" id="regionCount" value="1" min="1" max="20" />
+        </div>
+        <div class="field">
+          <label>VPCs per region (avg)</label>
+          <input type="number" id="vpcsPerRegion" value="2" min="1" max="50" />
+        </div>
+      </div>
+      <div class="field">
+        <label>OS mix (estimate)</label>
+        <div class="field-row-3">
+          <div class="field" style="margin-bottom:0;">
+            <label style="font-size:12px;color:var(--gray);">Linux %</label>
+            <input type="number" id="osLinuxPct" value="60" min="0" max="100" />
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label style="font-size:12px;color:var(--gray);">Windows %</label>
+            <input type="number" id="osWindowsPct" value="30" min="0" max="100" />
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label style="font-size:12px;color:var(--gray);">EKS pods %</label>
+            <input type="number" id="osEksPct" value="10" min="0" max="100" />
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Per-sensor average traffic (Mbps) <span class="hint">tap throughput</span></label>
+        <div class="slider-wrap">
+          <input type="range" id="mbpsPerSensor" min="10" max="2000" step="10" value="100" />
+          <div class="readout"><span id="mbpsPerSensor_out">100</span> Mbps</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Growth multiplier <span class="hint">12-month projection</span></label>
+        <div class="slider-wrap">
+          <input type="range" id="growthMult" min="1" max="3" step="0.1" value="1.3" />
+          <div class="readout"><span id="growthMult_out">1.3</span>×</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Visibility Config + Topology -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-head">
+        <h2>Visibility Configuration</h2>
+        <span class="badge dark">DATA PLANE</span>
+      </div>
+      <div class="field">
+        <label>Use vPB-KVO (Virtual Packet Broker)?</label>
+        <div class="toggle-row">
+          <button type="button" class="toggle-pill on" data-toggle="vpbEnabled" data-value="true">Yes — recommended</button>
+          <button type="button" class="toggle-pill" data-toggle="vpbEnabled" data-value="false">No — sensors direct to CLMS</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>SSL Payload tapping?</label>
+        <div class="toggle-row">
+          <button type="button" class="toggle-pill" data-toggle="sslPayload" data-value="true">Yes — decrypt at sensor</button>
+          <button type="button" class="toggle-pill on" data-toggle="sslPayload" data-value="false">No — encrypted traffic only</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>DTLS encryption (GREoUDP tunnel)?</label>
+        <div class="toggle-row">
+          <button type="button" class="toggle-pill" data-toggle="dtlsEnabled" data-value="true">Yes — production hardening</button>
+          <button type="button" class="toggle-pill on" data-toggle="dtlsEnabled" data-value="false">No — plaintext tunnel</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Auto-Mirror Lambda (EventBridge-driven tagging)?</label>
+        <div class="toggle-row">
+          <button type="button" class="toggle-pill on" data-toggle="autoMirror" data-value="true">Yes — recommended</button>
+          <button type="button" class="toggle-pill" data-toggle="autoMirror" data-value="false">No — manual tagging</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Topology Strategy</h2>
+        <span class="badge">CONTROL PLANE</span>
+      </div>
+      <div class="field">
+        <label>Topology preference</label>
+        <select id="topologyPref">
+          <option value="auto">Auto — recommend based on scale</option>
+          <option value="single">Force single-KVO (one region acts as central)</option>
+          <option value="federated">Force federated (one KVO per region)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>KVO Redundancy</label>
+        <select id="redundancy">
+          <option value="single">Single instance (POC / non-critical)</option>
+          <option value="active-standby">Active/Standby (production)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>vController OS hardening</label>
+        <select id="hardening">
+          <option value="standard">Standard (Marketplace default)</option>
+          <option value="cis">CIS Level 1 (custom AMI)</option>
+        </select>
+      </div>
+      <div class="callout"><strong>KVO Marketplace AMI</strong> is hard-locked to <code>c5.2xlarge</code> (8 vCPU, 16 GiB RAM). For more capacity, scale horizontally (federate) — not vertically. Vertical scaling requires a custom Keysight build (engagement with PS).</div>
+    </div>
+  </div>
+
+  <!-- Validation -->
+  <div class="grid-1">
+    <div id="validation" class="card" style="display:none;">
+      <div class="card-head"><h2>Validation</h2><span class="badge dark">CHECK</span></div>
+      <div id="validationBody"></div>
+    </div>
+  </div>
+
+  <!-- 3. RESULTS: Summary -->
+  <div class="card">
+    <div class="card-head">
+      <h2>Recommended Topology</h2>
+      <span class="badge green">OUTPUT</span>
+    </div>
+    <div class="summary-grid">
+      <div class="summary-cell accent">
+        <div class="label">Total Sensors (Projected)</div>
+        <div class="value"><span id="rec_sensors">650</span></div>
+        <div class="sub">After growth multiplier</div>
+      </div>
+      <div class="summary-cell">
+        <div class="label">KVO Instances</div>
+        <div class="value"><span id="rec_kvos">1</span></div>
+        <div class="sub"><span id="rec_kvo_type">c5.2xlarge</span></div>
+      </div>
+      <div class="summary-cell">
+        <div class="label">CLMS Instances</div>
+        <div class="value"><span id="rec_clms">1</span></div>
+        <div class="sub">t3.xlarge</div>
+      </div>
+      <div class="summary-cell">
+        <div class="label">vPB Instances</div>
+        <div class="value"><span id="rec_vpbs">1</span></div>
+        <div class="sub">t3.xlarge</div>
+      </div>
+      <div class="summary-cell">
+        <div class="label">Collector SVMs (auto)</div>
+        <div class="value"><span id="rec_collectors">2</span></div>
+        <div class="sub">c5.2xlarge per region</div>
+      </div>
+      <div class="summary-cell accent">
+        <div class="label">Est. Monthly Cost</div>
+        <div class="value">$<span id="rec_monthly_cost">740</span></div>
+        <div class="sub" id="rec_pricing_basis">On-Demand, us-east-1</div>
+      </div>
+    </div>
+
+    <div id="rec_callout" class="callout success">
+      <strong>Recommendation:</strong> <span id="rec_strategy">Single KVO in primary region. CLMS adopted on private IP. Sensors deployed via SSM Run Command.</span>
+    </div>
+  </div>
+
+  <!-- 4. Per-region BOM -->
+  <div class="card">
+    <div class="card-head">
+      <h2>Per-Region BOM</h2>
+      <span class="badge gold">SOW-READY</span>
+    </div>
+    <table id="bomTable">
+      <thead>
+        <tr>
+          <th>Component</th>
+          <th>Instance Type</th>
+          <th class="num">Per Region</th>
+          <th class="num">Total</th>
+          <th class="num">$/mo each</th>
+          <th class="num">$/mo total</th>
+        </tr>
+      </thead>
+      <tbody id="bomBody"></tbody>
+    </table>
+  </div>
+
+  <!-- 5. Architecture diagram -->
+  <div class="card">
+    <div class="card-head">
+      <h2>Architecture Topology</h2>
+      <span class="badge blue">DIAGRAM</span>
+    </div>
+    <div id="topology" class="topology">Loading...</div>
+  </div>
+
+  <!-- 6. License math -->
+  <div class="card">
+    <div class="card-head">
+      <h2>License Math</h2>
+      <span class="badge">CHECK</span>
+    </div>
+    <table>
+      <thead>
+        <tr><th>License Component</th><th>Required Count</th><th>Notes</th></tr>
+      </thead>
+      <tbody id="licenseBody"></tbody>
+    </table>
+    <div class="callout">License costs are <strong>BYOL</strong> (Bring Your Own License). The AWS Marketplace AMIs do <em>not</em> include CloudLens licensing — those come from your Keysight order. Cost numbers on this page reflect <strong>AWS infrastructure only</strong>.</div>
+  </div>
+
+  <!-- 7. Deployment time -->
+  <div class="card">
+    <div class="card-head">
+      <h2>Deployment Time Estimate</h2>
+      <span class="badge dark">TIMING</span>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Phase</th><th>Activity</th><th class="num">Duration</th></tr>
+      </thead>
+      <tbody id="timingBody"></tbody>
+    </table>
+  </div>
+
+  <!-- 8. BOM exports -->
+  <div class="card">
+    <div class="card-head">
+      <h2>Markdown BOM</h2>
+      <span class="badge dark">DELIVERABLE</span>
+    </div>
+    <p style="font-size: 14px; color: var(--gray); margin-bottom: 12px;">Complete Bill of Materials with executive summary, Marketplace AMI inventory, monthly cost projection, license requirements, and deployment checklist. Drops into email, Confluence, Jira, or SOW.</p>
+    <div class="bom-output" id="bomMarkdownOut">Loading...</div>
+    <div class="copy-btn-row">
+      <button class="primary" id="copyBomBtn">Copy BOM</button>
+      <button id="downloadMdBtn">Download .md</button>
+      <button id="printBomBtn">Print / Save as PDF</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>CSV for SOW</h2>
+      <span class="badge green">SOW</span>
+    </div>
+    <p style="font-size: 14px; color: var(--gray); margin-bottom: 12px;">One row per component per region. Drops into Keysight SOW templates or any spreadsheet. Opens cleanly in Excel, Numbers, Google Sheets.</p>
+    <div class="bom-output" id="csvOut">Loading...</div>
+    <div class="copy-btn-row">
+      <button class="primary" id="copyCsvBtn">Copy CSV</button>
+      <button id="downloadCsvBtn">Download .csv</button>
+    </div>
+  </div>
+
+  <footer class="calc-foot">
+    © Keysight Technologies &nbsp;|&nbsp; CloudLens KVO on AWS — EC2 Sizing Calculator v1.0 &nbsp;|&nbsp; Prepared by Brine Ketum, Solutions Engineer &nbsp;|&nbsp; Confidential &nbsp;|&nbsp; ⚠ Estimated sizing, verify with Keysight PS
+  </footer>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ============================================================================
+//   CloudLens KVO on AWS — EC2 Sizing Calculator
+//   v1.0  ·  2026-06-09
+// ============================================================================
+
+function $(id) { return document.getElementById(id); }
+function setText(id, txt) { var el = $(id); if (el) el.textContent = txt; }
+function fmt(n) { return Number(n).toLocaleString("en-US"); }
+function money(n) { return Number(n).toLocaleString("en-US", { maximumFractionDigits: 0 }); }
+
+// ---------- AWS PRICING TABLE (us-east-1 on-demand, monthly @ 730 hrs) ----------
+var AWS_PRICING = {
+  // EC2 hourly (on-demand) — multiplied by 730 hrs for monthly
+  "c5.2xlarge":  { hourly: 0.34,  monthly: 248.20 },
+  "t3.xlarge":   { hourly: 0.1664, monthly: 121.47 },
+  "t3.medium":   { hourly: 0.0416, monthly: 30.37 },
+  "c5.4xlarge":  { hourly: 0.68,  monthly: 496.40 },
+  // Storage (GP3, $0.08/GB-month)
+  "ebs-200gb":   { hourly: 0,     monthly: 16.00 },
+  "ebs-100gb":   { hourly: 0,     monthly: 8.00 },
+  // Lambda + EventBridge — essentially $0 at moderate scale
+  "lambda-mirror": { hourly: 0, monthly: 0.5 },
+  // Bandwidth: $0.09/GB egress (only counted when SVMs egress to non-VPC tools)
+  "bandwidth-per-gb": 0.09
+};
+var DISCOUNT = { "on-demand": 1.0, "ri-1yr": 0.63, "ri-3yr": 0.40 };
+
+// ---------- CONFIG STATE ----------
+var state = {
+  vpbEnabled: true,
+  sslPayload: false,
+  dtlsEnabled: false,
+  autoMirror: true
+};
+
+// ---------- READ INPUTS ----------
+function readInputs() {
+  return {
+    customerName:    $("customerName").value || "Example Customer",
+    awsAccountId:    $("awsAccountId").value || "123456789012",
+    targetQuarter:   $("targetQuarter").value || "Q3 2026",
+    cloudlensRelease: $("cloudlensRelease").value || "6.14.0",
+    kvoVersion:      $("kvoVersion").value || "1.12.1",
+    pricingModel:    $("pricingModel").value,
+    totalSensors:    parseInt($("totalSensors").value || "500"),
+    regionCount:     parseInt($("regionCount").value || "1"),
+    vpcsPerRegion:   parseInt($("vpcsPerRegion").value || "2"),
+    osLinuxPct:      parseInt($("osLinuxPct").value || "60"),
+    osWindowsPct:    parseInt($("osWindowsPct").value || "30"),
+    osEksPct:        parseInt($("osEksPct").value || "10"),
+    mbpsPerSensor:   parseInt($("mbpsPerSensor").value || "100"),
+    growthMult:      parseFloat($("growthMult").value || "1.3"),
+    topologyPref:    $("topologyPref").value,
+    redundancy:      $("redundancy").value,
+    hardening:       $("hardening").value,
+    vpbEnabled:      state.vpbEnabled,
+    sslPayload:      state.sslPayload,
+    dtlsEnabled:     state.dtlsEnabled,
+    autoMirror:      state.autoMirror
+  };
+}
+
+// ---------- CORE SIZING ALGORITHM ----------
+function calculate() {
+  var I = readInputs();
+
+  // Projected sensor count
+  var sensorsRaw = I.totalSensors;
+  var sensorsProjected = Math.ceil(sensorsRaw * I.growthMult);
+  var sensorsPerRegion = Math.ceil(sensorsProjected / I.regionCount);
+
+  // KVO topology decision:
+  //   Single KVO supports up to ~5,000 sensors safely (per Keysight + field data)
+  //   Above that → federate (one KVO per region)
+  var SINGLE_KVO_LIMIT = 5000;
+  var topology;
+  if (I.topologyPref === "single") {
+    topology = "single";
+  } else if (I.topologyPref === "federated") {
+    topology = "federated";
+  } else {
+    // auto
+    topology = (sensorsProjected > SINGLE_KVO_LIMIT || I.regionCount > 2) ? "federated" : "single";
+  }
+
+  var kvoCount = (topology === "single") ? 1 : I.regionCount;
+  if (I.redundancy === "active-standby") kvoCount = kvoCount * 2;
+
+  // CLMS: one per region (CLMS is regional)
+  var clmsCount = I.regionCount;
+  if (I.redundancy === "active-standby") clmsCount = clmsCount * 2;
+
+  // vPB: one per region if enabled
+  var vpbCount = I.vpbEnabled ? I.regionCount : 0;
+  if (I.vpbEnabled && I.redundancy === "active-standby") vpbCount = vpbCount * 2;
+
+  // Collector SVMs (auto-deployed by KVO Zone Tapping)
+  //   Rule of thumb: 1 collector per ~500 sensor mirror sessions per region
+  //   Plus AWS hard limit of 10 mirror sessions per ENI ⇒ ~50 sensors per collector ENI
+  //   We allocate generously: 1 collector / 250 sensors / region (min 1, max scales)
+  var collectorsPerRegion = Math.max(1, Math.ceil(sensorsPerRegion / 250));
+  // Cap at 10 collectors per region (KVO limit-ish; engage PS above this)
+  collectorsPerRegion = Math.min(collectorsPerRegion, 10);
+  var totalCollectors = collectorsPerRegion * I.regionCount;
+
+  // Aggregate sensor throughput per region (for vPB sizing flag)
+  var gbpsPerRegion = (sensorsPerRegion * I.mbpsPerSensor) / 1000;
+
+  // Lambda: 1 deployment per region if autoMirror enabled
+  var lambdaCount = I.autoMirror ? I.regionCount : 0;
+
+  // ---------- COST CALCULATION ----------
+  var discount = DISCOUNT[I.pricingModel] || 1.0;
+
+  // Per-component monthly cost
+  var costKvo       = kvoCount       * AWS_PRICING["c5.2xlarge"].monthly  * discount + kvoCount * AWS_PRICING["ebs-200gb"].monthly;
+  var costClms      = clmsCount      * AWS_PRICING["t3.xlarge"].monthly   * discount + clmsCount * AWS_PRICING["ebs-100gb"].monthly;
+  var costVpb       = vpbCount       * AWS_PRICING["t3.xlarge"].monthly   * discount + vpbCount * AWS_PRICING["ebs-100gb"].monthly;
+  var costCollectors = totalCollectors * AWS_PRICING["c5.2xlarge"].monthly * discount + totalCollectors * AWS_PRICING["ebs-200gb"].monthly;
+  var costLambda    = lambdaCount    * AWS_PRICING["lambda-mirror"].monthly;
+  var bandwidthGB   = Math.ceil(sensorsProjected * I.mbpsPerSensor * 3600 * 24 * 30 / 8 / 1024 / 1024 / 1024 * 0.10); // 10% egress assumption
+  var costBandwidth = bandwidthGB * AWS_PRICING["bandwidth-per-gb"];
+  var costTotal = costKvo + costClms + costVpb + costCollectors + costLambda + costBandwidth;
+
+  // ---------- POPULATE SUMMARY ----------
+  setText("rec_sensors", fmt(sensorsProjected));
+  setText("rec_kvos", kvoCount);
+  setText("rec_kvo_type", "c5.2xlarge × " + kvoCount);
+  setText("rec_clms", clmsCount);
+  setText("rec_vpbs", I.vpbEnabled ? vpbCount : "0 (skipped)");
+  setText("rec_collectors", totalCollectors);
+  setText("rec_monthly_cost", money(costTotal));
+  setText("rec_pricing_basis",
+    (I.pricingModel === "on-demand" ? "On-Demand" :
+     I.pricingModel === "ri-1yr"   ? "1-yr Reserved" : "3-yr Reserved") + ", us-east-1");
+
+  // Strategy recommendation copy
+  var strategy = "";
+  if (topology === "single") {
+    strategy = "Single KVO in primary region, " +
+      (I.redundancy === "active-standby" ? "Active/Standby pair, " : "") +
+      I.regionCount + " region(s), " + clmsCount + " CLMS, " +
+      (I.vpbEnabled ? vpbCount + " vPB(s), " : "no vPB, ") +
+      totalCollectors + " collector SVMs auto-deployed by KVO Zone Tapping.";
+  } else {
+    strategy = "Federated topology — " + kvoCount + " KVO(s) across " + I.regionCount + " region(s) " +
+      "(reason: " + (sensorsProjected > SINGLE_KVO_LIMIT ? "exceeds single-KVO 5,000-sensor recommendation" : "multi-region footprint") + "). " +
+      "Each region runs an independent KVO + CLMS" + (I.vpbEnabled ? " + vPB" : "") + ". " +
+      "Federation requires cross-region admin coordination — engage Keysight PS for the federation playbook.";
+  }
+  setText("rec_strategy", strategy);
+
+  // ---------- PER-REGION BOM TABLE ----------
+  var bomBody = $("bomBody");
+  bomBody.innerHTML = "";
+  function addRow(comp, type, perReg, total, eachCost, totalCost) {
+    var tr = document.createElement("tr");
+    tr.innerHTML = "<td>" + comp + "</td><td><code>" + type + "</code></td>" +
+                   "<td class='num'>" + perReg + "</td><td class='num'>" + total + "</td>" +
+                   "<td class='num'>$" + money(eachCost) + "</td><td class='num'>$" + money(totalCost) + "</td>";
+    bomBody.appendChild(tr);
+  }
+  var kvoPerRegion = topology === "single" ? (I.redundancy === "active-standby" ? 2 : (I.regionCount === 1 ? kvoCount : 0)) : (I.redundancy === "active-standby" ? 2 : 1);
+  if (topology === "single" && I.regionCount > 1) kvoPerRegion = "—";
+  addRow("KVO (master orchestrator)", "c5.2xlarge", kvoPerRegion, kvoCount, AWS_PRICING["c5.2xlarge"].monthly * discount + AWS_PRICING["ebs-200gb"].monthly, costKvo);
+  addRow("CLMS (sensor manager)", "t3.xlarge", clmsCount / I.regionCount, clmsCount, AWS_PRICING["t3.xlarge"].monthly * discount + AWS_PRICING["ebs-100gb"].monthly, costClms);
+  if (I.vpbEnabled) {
+    addRow("vPB-KVO (packet broker)", "t3.xlarge", vpbCount / I.regionCount, vpbCount, AWS_PRICING["t3.xlarge"].monthly * discount + AWS_PRICING["ebs-100gb"].monthly, costVpb);
+  }
+  addRow("Collector SVM (auto)", "c5.2xlarge", collectorsPerRegion, totalCollectors, AWS_PRICING["c5.2xlarge"].monthly * discount + AWS_PRICING["ebs-200gb"].monthly, costCollectors);
+  if (I.autoMirror) {
+    addRow("Auto-Mirror Lambda + EventBridge", "Lambda (python3.12)", "1", lambdaCount, AWS_PRICING["lambda-mirror"].monthly, costLambda);
+  }
+  addRow("Data Egress (estimated)", "10% of capture", "—", bandwidthGB + " GB", AWS_PRICING["bandwidth-per-gb"], costBandwidth);
+  var trTotal = document.createElement("tr");
+  trTotal.className = "total";
+  trTotal.innerHTML = "<td colspan='5'>Monthly AWS infrastructure cost</td><td class='num'>$" + money(costTotal) + "</td>";
+  bomBody.appendChild(trTotal);
+
+  // ---------- TOPOLOGY DIAGRAM ----------
+  renderTopology(I, topology, kvoCount, clmsCount, vpbCount, totalCollectors);
+
+  // ---------- LICENSE MATH ----------
+  var licBody = $("licenseBody");
+  licBody.innerHTML = "";
+  function addLic(comp, count, notes) {
+    var tr = document.createElement("tr");
+    tr.innerHTML = "<td>" + comp + "</td><td>" + count + "</td><td style='font-size:13px;color:var(--gray);'>" + notes + "</td>";
+    licBody.appendChild(tr);
+  }
+  addLic("KVO perpetual", kvoCount, "One license per KVO instance.");
+  addLic("vPB Advanced", I.vpbEnabled ? vpbCount : "0", I.vpbEnabled ? "One per vPB-KVO. Enables filter, dedup, GREoUDP decap." : "Skipped — no vPB.");
+  addLic("CloudLens Enterprise", 1, "Account-wide. Covers all sensors regardless of count.");
+  addLic("CloudLens Sensor count", fmt(sensorsProjected), "Per-sensor licensing applies. Confirm tier with Keysight Sales.");
+  if (I.sslPayload) {
+    addLic("SSL Payload tap", fmt(sensorsProjected), "Add-on license required when SSL Payload mode is enabled.");
+  }
+
+  // ---------- DEPLOYMENT TIMING ----------
+  var t = $("timingBody");
+  t.innerHTML = "";
+  function addTime(phase, activity, dur) {
+    var tr = document.createElement("tr");
+    tr.innerHTML = "<td><strong>" + phase + "</strong></td><td>" + activity + "</td><td class='num'>" + dur + "</td>";
+    t.appendChild(tr);
+  }
+  addTime("Prereq", "Subscribe to 3 Marketplace AMIs (one-time, per account)", "5 min");
+  addTime("Phase 1", "CloudFormation/Terraform stack creates VPC + KVO + CLMS + vPB + Lambda + IAM", "5 min");
+  addTime("Phase 2", "Accept KVO EULA + activate licenses + adopt CLMS + onboard vPB + create Cloud Config", "15 min");
+  var p3 = sensorsProjected <= 50 ? "5–10 min" :
+           sensorsProjected <= 200 ? "10–20 min" :
+           sensorsProjected <= 800 ? "15–30 min" :
+           sensorsProjected <= 2000 ? "30–60 min" :
+           sensorsProjected <= 5000 ? "1–2 hrs" :
+           sensorsProjected <= 10000 ? "2–4 hrs" : "4+ hrs";
+  addTime("Phase 3", "SSM Run Command rolls sensors to " + fmt(sensorsProjected) + " tagged EC2 instances", p3);
+  if (I.regionCount > 1) {
+    addTime("Per region", "Repeat phases 1–3 in each additional region", I.regionCount + " × above");
+  }
+
+  // ---------- BOM markdown + CSV ----------
+  $("bomMarkdownOut").textContent = generateBom(I, {
+    topology: topology,
+    kvoCount: kvoCount, clmsCount: clmsCount, vpbCount: vpbCount,
+    totalCollectors: totalCollectors, collectorsPerRegion: collectorsPerRegion,
+    sensorsProjected: sensorsProjected, sensorsPerRegion: sensorsPerRegion,
+    costKvo: costKvo, costClms: costClms, costVpb: costVpb,
+    costCollectors: costCollectors, costLambda: costLambda,
+    costBandwidth: costBandwidth, costTotal: costTotal,
+    gbpsPerRegion: gbpsPerRegion, strategy: strategy
+  });
+
+  $("csvOut").textContent = generateCsv(I, {
+    topology: topology,
+    kvoCount: kvoCount, clmsCount: clmsCount, vpbCount: vpbCount,
+    totalCollectors: totalCollectors, collectorsPerRegion: collectorsPerRegion,
+    sensorsProjected: sensorsProjected,
+    costTotal: costTotal,
+    costKvo: costKvo, costClms: costClms, costVpb: costVpb,
+    costCollectors: costCollectors, costLambda: costLambda
+  });
+}
+
+// ---------- ASCII Topology Diagram ----------
+function renderTopology(I, topology, kvoCount, clmsCount, vpbCount, totalCollectors) {
+  var lines = [];
+  if (topology === "single") {
+    lines.push("┌─────────────────────────────────────────────────────────────────┐");
+    lines.push("│  AWS Account " + I.awsAccountId + "                                       │");
+    lines.push("│                                                                 │");
+    lines.push("│  ┌──────────────────────────┐                                   │");
+    lines.push("│  │  Primary Region          │                                   │");
+    lines.push("│  │                          │                                   │");
+    lines.push("│  │   KVO × " + (kvoCount).toString().padEnd(3) + " (c5.2xlarge) │  ← master orchestrator           │");
+    lines.push("│  │      │                   │                                   │");
+    lines.push("│  │      └─► CLMS × " + (Math.ceil(clmsCount/I.regionCount)).toString().padEnd(2) + "(t3.xlg)│  ← sensor manager                │");
+    if (I.vpbEnabled) {
+    lines.push("│  │      └─► vPB × " + (Math.ceil(vpbCount/I.regionCount)).toString().padEnd(3) + "(t3.xlg)│  ← packet broker (SSH 9022)       │");
+    }
+    lines.push("│  │      └─► Collector SVMs × " + (Math.ceil(totalCollectors/I.regionCount)).toString().padEnd(2) + "(c5.2xl)  ← auto-deployed            │");
+    if (I.autoMirror) {
+    lines.push("│  │      └─► Auto-Mirror Lambda + EventBridge   ← sub-second tag │");
+    }
+    lines.push("│  └──────────────────────────┘                                   │");
+    if (I.regionCount > 1) {
+    lines.push("│                                                                 │");
+    lines.push("│  + " + (I.regionCount - 1) + " additional region(s):                                   │");
+    lines.push("│    Each runs CLMS + " + (I.vpbEnabled ? "vPB + " : "") + "collectors                    │");
+    lines.push("│    Sensors register back to primary-region KVO                  │");
+    }
+    lines.push("└─────────────────────────────────────────────────────────────────┘");
+  } else {
+    lines.push("┌─────────────────────────────────────────────────────────────────┐");
+    lines.push("│  AWS Account " + I.awsAccountId + "  (FEDERATED TOPOLOGY)                   │");
+    lines.push("│                                                                 │");
+    for (var r = 1; r <= Math.min(I.regionCount, 3); r++) {
+      lines.push("│  ┌─ Region " + r + " ─────────────────┐                                   │");
+      lines.push("│  │  KVO × " + Math.ceil(kvoCount/I.regionCount) + " (c5.2xlarge)          │   ← regional master              │");
+      lines.push("│  │  CLMS × " + Math.ceil(clmsCount/I.regionCount) + " (t3.xlarge)         │                                  │");
+      if (I.vpbEnabled) {
+      lines.push("│  │  vPB × " + Math.ceil(vpbCount/I.regionCount) + " (t3.xlarge)           │                                  │");
+      }
+      lines.push("│  │  Collectors × " + Math.ceil(totalCollectors/I.regionCount) + " (c5.2xl)        │                                  │");
+      lines.push("│  └──────────────────────────┘                                   │");
+    }
+    if (I.regionCount > 3) {
+    lines.push("│  ... + " + (I.regionCount - 3) + " more region(s) with the same pattern              │");
+    }
+    lines.push("│                                                                 │");
+    lines.push("│  ⓘ  Federation requires cross-region admin coordination —       │");
+    lines.push("│      engage Keysight PS for the federation playbook.            │");
+    lines.push("└─────────────────────────────────────────────────────────────────┘");
+  }
+  $("topology").textContent = lines.join("\n");
+}
+
+// ---------- Markdown BOM generator ----------
+function generateBom(I, R) {
+  var bom = "";
+  var pricingLabel = I.pricingModel === "on-demand" ? "On-Demand" :
+                     I.pricingModel === "ri-1yr"   ? "1-yr Reserved (37% discount)" :
+                                                     "3-yr Reserved (60% discount)";
+  bom += "# CloudLens KVO on AWS — Bill of Materials\n\n";
+  bom += "**Customer:** " + I.customerName + "  \n";
+  bom += "**AWS Account:** " + I.awsAccountId + "  \n";
+  bom += "**Target Deployment:** " + I.targetQuarter + "  \n";
+  bom += "**CloudLens Release:** " + I.cloudlensRelease + "  \n";
+  bom += "**KVO Version:** " + I.kvoVersion + "  \n";
+  bom += "**Pricing Model:** " + pricingLabel + " (us-east-1)  \n";
+  bom += "**Prepared:** " + new Date().toISOString().slice(0, 10) + "\n\n";
+
+  bom += "---\n\n";
+  bom += "## Executive Summary\n\n";
+  bom += "- **Topology:** " + (R.topology === "single" ? "Single KVO (primary region)" : "Federated (" + R.kvoCount + " KVOs across " + I.regionCount + " regions)") + "\n";
+  bom += "- **Projected sensors (12-mo):** " + fmt(R.sensorsProjected) + " (" + fmt(I.totalSensors) + " baseline × " + I.growthMult + "× growth)\n";
+  bom += "- **Aggregate throughput:** " + R.gbpsPerRegion.toFixed(1) + " Gbps per region\n";
+  bom += "- **Monthly AWS cost:** **$" + money(R.costTotal) + "**\n";
+  bom += "- **Annual AWS cost:** **$" + money(R.costTotal * 12) + "**\n";
+  bom += "- **Strategy:** " + R.strategy + "\n\n";
+
+  bom += "---\n\n";
+  bom += "## AWS Infrastructure BOM\n\n";
+  bom += "| Component | Instance Type | Per Region | Total Count | $/mo each | $/mo total |\n";
+  bom += "|---|---|---:|---:|---:|---:|\n";
+  bom += "| KVO (master orchestrator) | `c5.2xlarge` | " + (R.topology === "single" ? (I.regionCount === 1 ? R.kvoCount : "primary only") : Math.ceil(R.kvoCount/I.regionCount)) + " | " + R.kvoCount + " | $" + money(AWS_PRICING["c5.2xlarge"].monthly * (DISCOUNT[I.pricingModel] || 1) + AWS_PRICING["ebs-200gb"].monthly) + " | $" + money(R.costKvo) + " |\n";
+  bom += "| CLMS (sensor manager) | `t3.xlarge` | " + Math.ceil(R.clmsCount/I.regionCount) + " | " + R.clmsCount + " | $" + money(AWS_PRICING["t3.xlarge"].monthly * (DISCOUNT[I.pricingModel] || 1) + AWS_PRICING["ebs-100gb"].monthly) + " | $" + money(R.costClms) + " |\n";
+  if (I.vpbEnabled) {
+    bom += "| vPB-KVO (packet broker) | `t3.xlarge` | " + Math.ceil(R.vpbCount/I.regionCount) + " | " + R.vpbCount + " | $" + money(AWS_PRICING["t3.xlarge"].monthly * (DISCOUNT[I.pricingModel] || 1) + AWS_PRICING["ebs-100gb"].monthly) + " | $" + money(R.costVpb) + " |\n";
+  }
+  bom += "| Collector SVM (auto-deployed) | `c5.2xlarge` | " + R.collectorsPerRegion + " | " + R.totalCollectors + " | $" + money(AWS_PRICING["c5.2xlarge"].monthly * (DISCOUNT[I.pricingModel] || 1) + AWS_PRICING["ebs-200gb"].monthly) + " | $" + money(R.costCollectors) + " |\n";
+  if (I.autoMirror) {
+    bom += "| Auto-Mirror Lambda + EventBridge | Lambda python3.12 | 1 | " + I.regionCount + " | $1 | $" + money(R.costLambda) + " |\n";
+  }
+  bom += "| Data egress (10% of capture) | — | — | — | $0.09/GB | $" + money(R.costBandwidth) + " |\n";
+  bom += "| **AWS infrastructure total** | | | | | **$" + money(R.costTotal) + "** |\n\n";
+
+  bom += "---\n\n";
+  bom += "## AWS Marketplace AMIs\n\n";
+  bom += "| Product | AMI ID | Instance type | Source |\n";
+  bom += "|---|---|---|---|\n";
+  bom += "| KVO | `ami-017c0db8981569380` | `c5.2xlarge` **only** | AWS Marketplace |\n";
+  bom += "| CLMS (vController) | `ami-0bebd5e730315337e` | `t3.xlarge` recommended | AWS Marketplace |\n";
+  bom += "| vPB-KVO | `ami-0a561b450552b707d` | `t3.xlarge` **only** | AWS Marketplace |\n";
+  bom += "| Collector SVM (v6.13.0) | `ami-0c22ade3667f8d35a` | auto-sized | Deployed by KVO Zone Tapping |\n\n";
+
+  bom += "> ⚠ KVO and vPB-KVO Marketplace AMIs are **hard-locked** to specific instance types. Vertical scaling above these requires a custom Keysight build (engage PS). All scaling beyond Marketplace caps is horizontal (federation).\n\n";
+
+  bom += "---\n\n";
+  bom += "## License Math (BYOL)\n\n";
+  bom += "| License Component | Required | Notes |\n";
+  bom += "|---|---|---|\n";
+  bom += "| KVO perpetual | " + R.kvoCount + " | One license per KVO instance. |\n";
+  bom += "| vPB Advanced | " + (I.vpbEnabled ? R.vpbCount : "0 (skipped)") + " | One per vPB-KVO. |\n";
+  bom += "| CloudLens Enterprise | 1 | Account-wide. |\n";
+  bom += "| CloudLens Sensor count | " + fmt(R.sensorsProjected) + " | Per-sensor licensing applies. |\n";
+  if (I.sslPayload) {
+    bom += "| SSL Payload tap | " + fmt(R.sensorsProjected) + " | Add-on required when SSL Payload enabled. |\n";
+  }
+  bom += "\n> License costs are **NOT** included in monthly AWS cost above. AWS infrastructure only. Confirm license tier with Keysight Sales.\n\n";
+
+  bom += "---\n\n";
+  bom += "## Deployment Checklist\n\n";
+  bom += "- [ ] Subscribe to all 3 Keysight Marketplace AMIs (once per AWS account) — KVO, CLMS, vPB-KVO\n";
+  bom += "- [ ] Pre-create EC2 key pair in target region(s)\n";
+  bom += "- [ ] Tag every target EC2 instance: `cloudlens=true` + `Platform=linux-docker|linux-podman|windows`\n";
+  bom += "- [ ] Confirm IAM permissions to create CFN/Terraform stack with `CAPABILITY_NAMED_IAM`\n";
+  bom += "- [ ] Verify VPC has 3 subnets (mgmt / data / tool) OR plan to use the greenfield CFT template\n";
+  if (I.sslPayload) {
+    bom += "- [ ] Verify SSL Payload license is provisioned by Keysight Sales\n";
+  }
+  if (I.dtlsEnabled) {
+    bom += "- [ ] Plan DTLS certificate provisioning for GREoUDP tunnel encryption\n";
+  }
+  if (R.topology === "federated") {
+    bom += "- [ ] Schedule cross-region federation playbook walkthrough with Keysight PS\n";
+  }
+  bom += "- [ ] Schedule customer call to validate IP plan + subnet sizing\n";
+  bom += "- [ ] Confirm monitoring scope: which VPCs / VPCs / Auto Scaling Groups\n\n";
+
+  bom += "---\n\n";
+  bom += "## References\n\n";
+  bom += "- **Public docs site:** https://keysight-tech.github.io/cloudlens-autopilot-docs/\n";
+  bom += "- **CloudFormation template:** https://raw.githubusercontent.com/Keysight-Tech/cloudlens-autopilot-docs/main/cloudlens-autopilot.yaml\n";
+  bom += "- **Scaling guidance:** https://github.com/Keysight-Tech/cloudlens-autopilot-docs/blob/main/SCALING.md\n";
+  bom += "- **Customer runbook (DOCX):** https://github.com/Keysight-Tech/cloudlens-autopilot-docs/raw/main/CloudLens-AutoPilot-Deployment-Runbook.docx\n\n";
+
+  bom += "*Generated by CloudLens KVO on AWS Sizing Calculator v1.0 — Prepared by Brine Ketum, Solutions Engineer.*\n";
+  bom += "*⚠ Estimated sizing. Verify with Keysight Professional Services before committing to a customer SOW.*\n";
+  return bom;
+}
+
+// ---------- CSV generator ----------
+function generateCsv(I, R) {
+  var rows = [
+    ["Customer", "AWS Account", "Region", "Component", "Instance Type", "Count Per Region", "Total Count", "Monthly Cost USD"],
+  ];
+  for (var r = 1; r <= I.regionCount; r++) {
+    var regLabel = "Region " + r;
+    rows.push([I.customerName, I.awsAccountId, regLabel, "KVO", "c5.2xlarge",
+      R.topology === "single" ? (r === 1 ? Math.ceil(R.kvoCount/1) : 0) : Math.ceil(R.kvoCount/I.regionCount),
+      "", ""]);
+    rows.push([I.customerName, I.awsAccountId, regLabel, "CLMS", "t3.xlarge", Math.ceil(R.clmsCount/I.regionCount), "", ""]);
+    if (I.vpbEnabled) {
+      rows.push([I.customerName, I.awsAccountId, regLabel, "vPB-KVO", "t3.xlarge", Math.ceil(R.vpbCount/I.regionCount), "", ""]);
+    }
+    rows.push([I.customerName, I.awsAccountId, regLabel, "Collector SVM (auto)", "c5.2xlarge", R.collectorsPerRegion, "", ""]);
+    if (I.autoMirror) {
+      rows.push([I.customerName, I.awsAccountId, regLabel, "Auto-Mirror Lambda", "Lambda python3.12", 1, "", ""]);
+    }
+  }
+  rows.push(["", "", "", "TOTAL", "", "", "", "$" + money(R.costTotal)]);
+  return rows.map(function(r) {
+    return r.map(function(c) {
+      var s = String(c);
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }).join(",");
+  }).join("\n");
+}
+
+// ---------- TOGGLE PILL HANDLERS ----------
+document.querySelectorAll("[data-toggle]").forEach(function(btn) {
+  btn.addEventListener("click", function() {
+    var key = btn.getAttribute("data-toggle");
+    var val = btn.getAttribute("data-value") === "true";
+    state[key] = val;
+    document.querySelectorAll('[data-toggle="' + key + '"]').forEach(function(b) {
+      b.classList.toggle("on", b.getAttribute("data-value") === btn.getAttribute("data-value"));
+    });
+    calculate();
+  });
+});
+
+// ---------- INPUT LIVE-BIND ----------
+["customerName","awsAccountId","targetQuarter","cloudlensRelease","kvoVersion","pricingModel",
+ "totalSensors","regionCount","vpcsPerRegion","osLinuxPct","osWindowsPct","osEksPct",
+ "mbpsPerSensor","growthMult","topologyPref","redundancy","hardening"
+].forEach(function(id) {
+  var el = $(id);
+  if (!el) return;
+  el.addEventListener("input", function() {
+    // Update sliders' readout
+    var out = $(id + "_out");
+    if (out) out.textContent = el.value;
+    calculate();
+  });
+});
+
+// ---------- COPY / DOWNLOAD ----------
+function copyText(text, msg) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function(){ showToast(msg); });
+  } else { showToast("Clipboard not available"); }
+}
+function download(filename, content, mime) {
+  var blob = new Blob([content], { type: mime });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  showToast("Downloaded " + filename);
+}
+$("copyBomBtn").addEventListener("click", function(){ copyText($("bomMarkdownOut").textContent, "BOM copied"); });
+$("downloadMdBtn").addEventListener("click", function(){
+  var I = readInputs();
+  var n = (I.customerName || "customer").replace(/[^a-zA-Z0-9]/g, "_");
+  download("CloudLens_KVO_AWS_BOM_" + n + ".md", $("bomMarkdownOut").textContent, "text/markdown");
+});
+$("printBomBtn").addEventListener("click", function(){ window.print(); });
+$("copyCsvBtn").addEventListener("click", function(){ copyText($("csvOut").textContent, "CSV copied"); });
+$("downloadCsvBtn").addEventListener("click", function(){
+  var I = readInputs();
+  var n = (I.customerName || "customer").replace(/[^a-zA-Z0-9]/g, "_");
+  download("CloudLens_KVO_AWS_BOM_" + n + ".csv", $("csvOut").textContent, "text/csv");
+});
+
+// ---------- TOAST ----------
+function showToast(msg) {
+  var t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(function(){ t.classList.remove("show"); }, 2400);
+}
+
+// ---------- SAVE / LOAD / SHARE ----------
+function serializeConfig() {
+  var I = readInputs();
+  return {
+    v: 1, calc: "aws-ec2-kvo", ts: new Date().toISOString(),
+    data: I
+  };
+}
+function applyConfig(env) {
+  if (!env || env.calc !== "aws-ec2-kvo") return showToast("Wrong calculator type");
+  var d = env.data || {};
+  Object.keys(d).forEach(function(k){
+    var el = $(k);
+    if (el) el.value = d[k];
+  });
+  ["vpbEnabled","sslPayload","dtlsEnabled","autoMirror"].forEach(function(k){
+    if (d[k] !== undefined) state[k] = d[k];
+    document.querySelectorAll('[data-toggle="' + k + '"]').forEach(function(b) {
+      b.classList.toggle("on", (b.getAttribute("data-value") === "true") === state[k]);
+    });
+  });
+  calculate();
+  showToast("Configuration loaded");
+}
+
+$("saveBtn").addEventListener("click", function() {
+  var env = serializeConfig();
+  download("cloudlens_kvo_aws_config.json", JSON.stringify(env, null, 2), "application/json");
+});
+$("loadBtn").addEventListener("click", function() {
+  var inp = document.createElement("input");
+  inp.type = "file"; inp.accept = ".json";
+  inp.addEventListener("change", function(e) {
+    var f = e.target.files[0]; if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function() {
+      try { applyConfig(JSON.parse(rd.result)); } catch (err) { showToast("Invalid JSON"); }
+    };
+    rd.readAsText(f);
+  });
+  inp.click();
+});
+$("shareBtn").addEventListener("click", function() {
+  var env = serializeConfig();
+  var b64 = btoa(unescape(encodeURIComponent(JSON.stringify(env)))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  var url = window.location.origin + window.location.pathname + "?config=" + b64;
+  copyText(url, "Share link copied");
+});
+
+function bootstrapFromURL() {
+  var p = new URLSearchParams(window.location.search);
+  var b = p.get("config");
+  if (!b) return;
+  try {
+    var b64 = b.replace(/-/g,"+").replace(/_/g,"/");
+    while (b64.length % 4) b64 += "=";
+    var env = JSON.parse(decodeURIComponent(escape(atob(b64))));
+    applyConfig(env);
+  } catch (e) { console.warn("Bad config in URL:", e); }
+}
+
+// ---------- LOAD EXAMPLE ----------
+var EXAMPLE_PRESET = {
+  v: 1, calc: "aws-ec2-kvo",
+  data: {
+    customerName: "Acme Financial Services",
+    awsAccountId: "466778915280",
+    targetQuarter: "Q3 2026",
+    cloudlensRelease: "6.14.0",
+    kvoVersion: "1.12.1",
+    pricingModel: "ri-1yr",
+    totalSensors: 847,
+    regionCount: 2,
+    vpcsPerRegion: 3,
+    osLinuxPct: 55,
+    osWindowsPct: 30,
+    osEksPct: 15,
+    mbpsPerSensor: 150,
+    growthMult: 1.5,
+    topologyPref: "auto",
+    redundancy: "single",
+    hardening: "standard",
+    vpbEnabled: true,
+    sslPayload: false,
+    dtlsEnabled: false,
+    autoMirror: true
+  }
+};
+$("loadExampleBtn").addEventListener("click", function(){ applyConfig(EXAMPLE_PRESET); });
+$("resetBtn").addEventListener("click", function() {
+  if (confirm("Reset all inputs to defaults?")) location.reload();
+});
+
+// ---------- THEME TOGGLE ----------
+(function(){
+  var root = document.documentElement;
+  var stored = localStorage.getItem("cl-theme");
+  var theme = stored || "light";
+  root.setAttribute("data-theme", theme);
+  var btn = $("ks-theme-toggle");
+  if (btn) {
+    btn.textContent = theme === "dark" ? "☀️" : "🌙";
+    btn.addEventListener("click", function(){
+      var next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      localStorage.setItem("cl-theme", next);
+      btn.textContent = next === "dark" ? "☀️" : "🌙";
+    });
+  }
+})();
+
+// ---------- BOOT ----------
+calculate();
+bootstrapFromURL();
+</script>
+
+</body>
+</html>
